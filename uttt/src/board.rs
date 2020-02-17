@@ -2,6 +2,7 @@ use std::collections::HashMap;
 
 #[derive(PartialEq)]
 #[derive(Clone, Copy)]
+#[derive(Debug)]
 pub enum Player {
     X,
     O,
@@ -14,14 +15,15 @@ pub enum Player {
 }
 
 pub struct Board {
-    // The smallest spaces on the board and who occupies them
-    // counted in row-major order
-    spaces: Vec<Player>,
+    // the width and height of the board
     size: usize,
+    // the number of level in the board where
+    // 1 is a standard 3x3 tic-tac-toe board
+    levels: usize,
     // The player who will make the next move
     to_move: Player,
-    // The higher level squares that are occupied
-    // Where the first element in the pair is the top left space
+    // The squares that are occupied
+    // Where the first element in the pair is the top left space of that square
     // the second element is the level
     occupied: HashMap<(usize, usize), Player>,
     // Tuple describing the upper left corner and level
@@ -32,24 +34,31 @@ pub struct Board {
 impl Board {
     // Creates a new board with size size_
     // size_ must be a power of three greater than or equal to 3
-    pub fn new(size_: usize) -> Board {
-        let mut result = Board { spaces: Vec::new(),
+    pub fn new(levels_: usize) -> Board {
+        if levels_ < 1 {
+            panic!("levels_ must be >= 1");
+        }
+        let size_ = (3 as usize).pow(levels_ as u32);
+        let mut result = Board {
                 to_move: Player::X,
                 size:  size_,
                 occupied: HashMap::new(),
-                next_legal: (0, size_*size_ - 1)};
-        result.spaces.resize_with(size_*size_, || {Player::NEITHER});
+                next_legal: (0, levels_ - 1),
+                levels: levels_};
+        for i in 0..(size_*size_) {
+            result.occupied.insert((i, 0), Player::NEITHER);
+        }
         return result;
     }
 
     pub fn pretty_print(&self) {
-        println!("hello");
-        for (i, space) in self.spaces.iter().enumerate() {
-            match space {
-                Player::X => print!("X "),
-                Player::O => print!("O "),
-                Player::NEITHER => print!("- "),
-                Player::DEAD => print!("+ "),
+        for i in 0..(self.size*self.size) {
+            match self.occupied.get(&(i, 0)) {
+                Some(Player::X) => print!("X "),
+                Some(Player::O) => print!("O "),
+                Some(Player::NEITHER) => print!("- "),
+                Some(Player::DEAD) => print!("+ "),
+                _ => panic!("Invalid board state"),
             }
             if i % self.size == self.size - 1 {
                 println!("");
@@ -62,19 +71,19 @@ impl Board {
     // does not affect board state if the move is illegal
     pub fn make_move(&mut self, space: usize) -> bool {
         // Make sure this square is available
-        if self.spaces[space] != Player::NEITHER {
+        if *self.occupied.get(&(space, 0)).unwrap() != Player::NEITHER {
             return false;
         }
         let size = self.size;
         // Check if the move is in the legal bounds
-        if self.next_legal.0 / size > space / size ||
+        /*if self.next_legal.0 / size > space / size ||
            self.next_legal.0 % size > space % size ||
            self.next_legal.1 / size < space / size ||
            self.next_legal.1 % size < space % size {
             return false;
-        }
+        }*/
         // Write this move to the board
-        self.spaces[space] = self.to_move;
+        self.occupied.insert((space, 0), self.to_move);
         
         // TODO: Update occupied and next_legal
 
@@ -95,7 +104,7 @@ impl Board {
    } 
 
     // Determine if the square with space at its top left corner at level
-    // where 0 is the lowest level (i.e. squares of 9 space) has been 
+    // where 0 is the lowest level (i.e. individual squares) has been 
     // won by a player
     // Returns the winner if so, returns NEITHER otherwise
     pub fn check_victory(&self, top_left: usize, level: usize) -> Player {
@@ -104,15 +113,13 @@ impl Board {
         this_board.resize_with(9, || {
             let i = counter;
             counter += 1;
-            if level == 0 {
-                self.spaces[self.space_from_lvl(top_left, level, i)]
-            } else {
-                match self.occupied.get(&(top_left, level)) {
-                    Some(p) => *p,
-                    None => Player::NEITHER
-                }
+            match self.occupied.get(&(self.space_from_lvl(top_left, level - 1, i), level - 1)) {
+                Some(p) => *p,
+                None => Player::NEITHER
             }
         });
+        println!("{:?}", this_board);
+        
 
         // Check the horizontals
         for j in [0, 3, 6].iter() {
@@ -158,9 +165,59 @@ mod tests {
 
      #[test]
      fn test_basic_moves_2lv() {
-        let mut b = Board::new(9);
+        let mut b = Board::new(2);
         assert!(b.make_move(0));
         assert!(!b.make_move(0));
         assert!(b.make_move(1));
+     }
+
+     #[test]
+     fn test_basic_victory_2lv() {
+        let mut b = Board::new(2);
+        assert!(b.make_move(25));
+
+        assert!(b.make_move(0));
+
+        assert!(b.make_move(28));
+
+        assert!(b.make_move(10));
+
+        assert!(b.make_move(22));
+
+        assert!(b.make_move(20));
+        assert!(b.check_victory(0, 1) == Player::O);
+     }
+
+     #[test]
+     fn test_basic_victory_2lv_2() {
+        let mut b = Board::new(2);
+        b.make_move(25);
+
+        b.make_move(0);
+
+        b.make_move(28);
+
+        b.make_move(1);
+
+        b.make_move(22);
+
+        b.make_move(2);
+        assert!(b.check_victory(0, 1) == Player::O);
+     }
+
+     #[test]
+     fn test_basic_victory_2lv_3() {
+        let mut b = Board::new(2);
+        b.make_move(25);
+
+        b.make_move(0);
+
+        b.make_move(28);
+
+        b.make_move(1);
+
+        b.make_move(22);
+
+        assert!(b.check_victory(0, 1) == Player::NEITHER);
      }
 }

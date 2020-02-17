@@ -14,9 +14,9 @@ struct Cli {
 fn main() {
     let args = Cli::from_args(); 
     println!("{:?}", args.o_ai_path);
-    println!("{:?}", args.x_ai_path);
     let mut b = Board::new(9);
     b.pretty_print();
+    println!("{:?}", args.x_ai_path);
     b.make_move(25);
 
     b.make_move(0);
@@ -29,5 +29,4 @@ fn main() {
 
     b.make_move(20);
     b.pretty_print();
-    assert!(b.check_victory(0, 0) == Player::O);
 }
