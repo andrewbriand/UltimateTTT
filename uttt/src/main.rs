@@ -14,7 +14,7 @@ struct Cli {
 fn main() {
     let args = Cli::from_args(); 
     println!("{:?}", args.o_ai_path);
-    let mut b = Board::new(9);
+    let mut b = Board::new(2);
     b.pretty_print();
     println!("{:?}", args.x_ai_path);
     b.make_move(25);

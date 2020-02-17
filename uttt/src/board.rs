@@ -58,7 +58,7 @@ impl Board {
                 Some(Player::O) => print!("O "),
                 Some(Player::NEITHER) => print!("- "),
                 Some(Player::DEAD) => print!("+ "),
-                _ => panic!("Invalid board state"),
+                None => panic!("Invalid board state"),
             }
             if i % self.size == self.size - 1 {
                 println!("");
