@@ -1,6 +1,7 @@
 use structopt::StructOpt;
 mod board;
 pub use board::Board;
+use board::Player;
 
 #[derive(StructOpt)]
 struct Cli {
@@ -15,8 +16,18 @@ fn main() {
     println!("{:?}", args.o_ai_path);
     println!("{:?}", args.x_ai_path);
     let mut b = Board::new(9);
-    assert!(b.make_move(0));
     b.pretty_print();
-    b.make_move(1);
+    b.make_move(25);
+
+    b.make_move(0);
+
+    b.make_move(28);
+
+    b.make_move(10);
+
+    b.make_move(22);
+
+    b.make_move(20);
     b.pretty_print();
+    assert!(b.check_victory(0, 0) == Player::O);
 }
