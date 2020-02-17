@@ -1,4 +1,6 @@
 use structopt::StructOpt;
+mod board;
+pub use board::Board;
 
 #[derive(StructOpt)]
 struct Cli {
@@ -12,4 +14,6 @@ fn main() {
     let args = Cli::from_args(); 
     println!("{:?}", args.o_ai_path);
     println!("{:?}", args.x_ai_path);
+    let b = Board::new(9);
+    b.pretty_print();
 }
