@@ -14,6 +14,9 @@ fn main() {
     let args = Cli::from_args(); 
     println!("{:?}", args.o_ai_path);
     println!("{:?}", args.x_ai_path);
-    let b = Board::new(9);
+    let mut b = Board::new(9);
+    assert!(b.make_move(0));
+    b.pretty_print();
+    b.make_move(1);
     b.pretty_print();
 }
