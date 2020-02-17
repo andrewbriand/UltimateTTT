@@ -83,6 +83,14 @@ impl Board {
         }
     }
 
+    fn space_lvl_to_top_left(&self, space: usize, level: usize) -> usize {
+       (space - (space % (3 as usize).pow(level as usize))) 
+    }
+
+    fn in_bounds(&self, space: usize) -> bool {
+        
+    }
+
     // make the next move on space space
     // returns true iff the move is legal
     // does not affect board state if the move is illegal
