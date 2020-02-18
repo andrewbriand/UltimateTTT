@@ -46,6 +46,9 @@ pub struct Board {
     // Tuple describing the upper left corner and level
     // of the next legal move space
     next_legal: (usize, usize),
+    // The player that has won the game, or NEITHER if
+    // the game is still ongoing
+    pub winner: Player,
 }
 
 impl Board {
@@ -60,8 +63,9 @@ impl Board {
                 to_move: Player::X,
                 size:  size_,
                 occupied: HashMap::new(),
-                next_legal: (0, levels_ - 1),
-                levels: levels_};
+                next_legal: (0, levels_ ),
+                levels: levels_,
+                winner: Player::NEITHER };
         for i in 0..(size_*size_) {
             result.occupied.insert((i, 0), Player::NEITHER);
         }
@@ -83,12 +87,21 @@ impl Board {
         }
     }
 
+    // Gets the top left corner of the square that space is in 
+    // at level
     fn space_lvl_to_top_left(&self, space: usize, level: usize) -> usize {
-       (space - (space % (3 as usize).pow(level as usize))) 
+       let _3pl = (3 as usize).pow(level as u32);
+       let _3pln = self.size * _3pl;
+       let i = space - (space % _3pl);
+       let l = i - (i % self.size);
+       (l - (l % _3pln)) + (i % self.size)
     }
 
+    // Is the given space in the move bounds for this turn?
     fn in_bounds(&self, space: usize) -> bool {
-        
+       //println!("{}", space);
+       //println!("{}", self.space_lvl_to_top_left(space, self.next_legal.1));
+       self.space_lvl_to_top_left(space, self.next_legal.1)  == self.next_legal.0
     }
 
     // make the next move on space space
@@ -99,19 +112,38 @@ impl Board {
         if *self.occupied.get(&(space, 0)).unwrap() != Player::NEITHER {
             return false;
         }
-        let size = self.size;
         // Check if the move is in the legal bounds
-        /*if self.next_legal.0 / size > space / size ||
-           self.next_legal.0 % size > space % size ||
-           self.next_legal.1 / size < space / size ||
-           self.next_legal.1 % size < space % size {
+        if !self.in_bounds(space) {
             return false;
-        }*/
+        }
         // Write this move to the board
         self.occupied.insert((space, 0), self.to_move);
         
         // TODO: Update occupied and next_legal
-
+        // Update occupied
+        let mut curr_level = 1;
+        while curr_level <= self.levels {
+            let top_left = self.space_lvl_to_top_left(space, curr_level);
+            let victorious_player = self.check_victory(top_left, curr_level);
+            if victorious_player != Player::NEITHER {
+                self.occupied.insert((top_left, curr_level), victorious_player);
+                let mut downward_movement = 0;
+                while downward_movement < self.size * (3 as usize).pow(curr_level as u32) {
+                    for i in 0..(3 as usize).pow(curr_level as u32) {
+                        if *self.occupied.get(&(top_left + downward_movement + i, 0)).unwrap() == Player::NEITHER {
+                            self.occupied.insert((top_left + downward_movement + i, 0), Player::DEAD);
+                        }
+                    }
+                    downward_movement += self.size;
+                }
+                if curr_level == self.levels {
+                    self.winner = victorious_player;
+                }
+            } else {
+                break;
+            }
+            curr_level += 1;
+        }
 
         // Move to the next player
         if self.to_move == Player::X {

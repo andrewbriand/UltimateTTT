@@ -17,16 +17,24 @@ fn main() {
     let mut b = Board::new(2);
     b.pretty_print();
     println!("{:?}", args.x_ai_path);
-    b.make_move(25);
-
-    b.make_move(0);
-
-    b.make_move(28);
-
-    b.make_move(10);
-
-    b.make_move(22);
-
-    b.make_move(20);
+    assert!(b.make_move(25));
+    assert!(b.make_move(0));
+    assert!(b.make_move(28));
+    assert!(b.make_move(10));
+    assert!(b.make_move(22));
+    assert!(b.make_move(20));
+    assert!(b.make_move(37));
+    assert!(b.make_move(30));
+    assert!(b.make_move(36));
+    assert!(b.make_move(40));
+    assert!(b.make_move(5));
+    assert!(b.make_move(50));
+    assert!(b.make_move(64));
+    assert!(b.make_move(60));
+    assert!(b.make_move(72));
+    assert!(b.make_move(70));
+    assert!(b.make_move(77));
+    assert!(b.make_move(80));
     b.pretty_print();
+    println!("{:?}", b.winner);
 }
