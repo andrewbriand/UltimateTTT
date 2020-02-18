@@ -53,7 +53,7 @@ fn main() {
     //assert!(b.make_move(32));
     //assert!(b.make_move(80));
     let mut v = Vec::new();
-    while true {
+    loop {
         let i: usize = read!();
         if i == 900 {
             break;
@@ -61,10 +61,10 @@ fn main() {
         println!("{}", b.make_move(i));
         //println!("{:?}", b);
         b.pretty_print();
+        v.push(i);
         if b.winner != Player::NEITHER {
             break;
         }
-        v.push(i);
         println!("{:?}", b.next_legal);
     }
     println!("{:?} wins", b.winner);

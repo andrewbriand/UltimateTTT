@@ -213,8 +213,8 @@ impl Board {
    // 54 55 56  63 64 65  72 73 74
    // 57 58 59  66 67 68  75 76 77
    // 60 61 62  69 70 71  78 79 80
-   // space_from_lvl(0, 0, 1) would return 01
-   // while space_from_lvl(0, 1, 1) would return 03
+   // Descend((54, 1), 2) gives (56, 0)
+   // Descend((0, 2), 8) gives 72
    fn descend(&self, sqr: &Square, i: usize) -> Square {
         Square { top_left: sqr.top_left + 
                       i * (3 as usize).pow(2 * (sqr.level - 1) as u32), 
@@ -301,5 +301,17 @@ mod tests {
          }
          assert!(b.make_move(68));
          assert!(!b.make_move(48));
+     }
+
+     #[test]
+     fn test_basic_victory_2lv() {
+         let mut b = Board::new(2);
+         let moves = vec![0, 3, 27, 4, 36, 5, 46, 13, 37, 12, 28, 14, 47, 22, 38, 21, 29, 23];
+         for i in moves {
+             assert!(b.make_move(i));
+             b.pretty_print();
+             println!("move: {}", i);
+         }
+         assert!(b.winner == Player::O);
      }
 }
