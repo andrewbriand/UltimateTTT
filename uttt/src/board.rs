@@ -144,15 +144,15 @@ impl Board {
         
         // Update occupied
         let (mut _check_sqr, _) = self.ascend(&curr_sqr);
-        let &mut check_sqr = &mut _check_sqr;
+        let check_sqr = &mut _check_sqr;
         // Keep checking levels as long as the player made a capture
         while check_sqr.level <= self.levels {
             //let top_left = self.space_lvl_to_top_left(space, curr_level);
             let victorious_player = self.check_victory(&check_sqr);
             if victorious_player != Player::NEITHER {
                 // This player now occupies this square
-                self.occupied.insert(check_sqr, victorious_player);
-                let mut downward_movement = 0;
+                self.occupied.insert(*check_sqr, victorious_player);
+                //let mut downward_movement = 0;
                 // Loop through all the level 0 spaces this square
                 // occupies and write Player::DEAD to them if they 
                 // are currently open
@@ -175,7 +175,7 @@ impl Board {
                 // No captures were made
                 if check_sqr.level == 1 {
                     let (_, i) = self.ascend(&curr_sqr);
-                    let (highest_sqr, _) = self.ascend(&check_sqr);
+                    let (highest_sqr, _) = self.ascend(check_sqr);
                     self.next_legal = self.descend(&highest_sqr, i);
                 }
                /* if check_sqr.level == self.levels - 1 {
@@ -184,9 +184,9 @@ impl Board {
                 }*/
                 break;
             }
-            let (check_sqr, _) = self.ascend(&check_sqr);
+            let (_check_sqr, _) = self.ascend(check_sqr);
+            *check_sqr = _check_sqr;
         }
-
         // Move to the next player
         if self.to_move == Player::X {
             self.to_move = Player::O;
