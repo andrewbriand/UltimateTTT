@@ -87,7 +87,7 @@ impl Board {
         }
     }
 
-    // Gets the top left corner of the square that space is in 
+    // Gets the top left corner of the square that space is
     // at level
     fn space_lvl_to_top_left(&self, space: usize, level: usize) -> usize {
        let _3pl = (3 as usize).pow(level as u32);
@@ -101,8 +101,12 @@ impl Board {
        let _3pl = (3 as usize).pow(level as u32);
        let _3pln = self.size * _3pl;
        let i = space - (space % _3pl);
-       let l = i - (i % self.size);
-       ((space % self.size) / _3pl) + 3 * (l / _3pln)
+       if level != 0 {
+           let l = i - (i % self.size);
+           ((space % self.size) / _3pl) + 3 * (l / _3pln)
+       } else {
+           (i % 3) + 3 * (i/self.size)
+       }
     }
 
     // Is the given space in the move bounds for this turn?
@@ -158,12 +162,15 @@ impl Board {
                 // No capture was made at this level, so stop checking
                 // and update the bounds for the next move accordingly
                 if curr_level == self.levels - 1 {
-                    let i = self.space_lvl_to_i(space, 1);
-                    println!("{}", i);
-                    self.next_legal = (self.space_from_lvl(top_left, i, curr_level), curr_level);
+                    println!("curr_level: {}", curr_level);
+                    let i = self.space_lvl_to_i(space, curr_level - 1);
+                    println!("i: {}", i);
+                    let new_top_left = self.space_lvl_to_top_left(top_left, curr_level + 1);
+                    self.next_legal = (self.space_from_lvl(new_top_left, curr_level, i), curr_level);
+                    println!("next_legal: {:?}", self.next_legal);
                 } else {
                     let i = self.space_lvl_to_i(top_left, curr_level);
-                    self.next_legal = (self.space_from_lvl(top_left, i, curr_level + 1), curr_level + 1);
+                    self.next_legal = (self.space_from_lvl(top_left, curr_level + 1, i), curr_level + 1);
                 }
                 break;
             }
