@@ -97,6 +97,14 @@ impl Board {
        (l - (l % _3pln)) + (i % self.size)
     }
 
+    fn space_lvl_to_i(&self, space: usize, level: usize) -> usize {
+       let _3pl = (3 as usize).pow(level as u32);
+       let _3pln = self.size * _3pl;
+       let i = space - (space % _3pl);
+       let l = i - (i % self.size);
+       ((space % self.size) / _3pl) + 3 * (l / _3pln)
+    }
+
     // Is the given space in the move bounds for this turn?
     fn in_bounds(&self, space: usize) -> bool {
        //println!("{}", space);
@@ -122,12 +130,17 @@ impl Board {
         // TODO: Update occupied and next_legal
         // Update occupied
         let mut curr_level = 1;
+        // Keep checking levels as long as the player made a capture
         while curr_level <= self.levels {
             let top_left = self.space_lvl_to_top_left(space, curr_level);
             let victorious_player = self.check_victory(top_left, curr_level);
             if victorious_player != Player::NEITHER {
+                // This player now occupies this square
                 self.occupied.insert((top_left, curr_level), victorious_player);
                 let mut downward_movement = 0;
+                // Loop through all the level 0 spaces this square
+                // occupies and write Player::DEAD to them if they 
+                // are currently open
                 while downward_movement < self.size * (3 as usize).pow(curr_level as u32) {
                     for i in 0..(3 as usize).pow(curr_level as u32) {
                         if *self.occupied.get(&(top_left + downward_movement + i, 0)).unwrap() == Player::NEITHER {
@@ -136,10 +149,22 @@ impl Board {
                     }
                     downward_movement += self.size;
                 }
+                // If this is the top level, the capturing player
+                // wins the game
                 if curr_level == self.levels {
                     self.winner = victorious_player;
                 }
             } else {
+                // No capture was made at this level, so stop checking
+                // and update the bounds for the next move accordingly
+                if curr_level == self.levels - 1 {
+                    let i = self.space_lvl_to_i(space, 1);
+                    println!("{}", i);
+                    self.next_legal = (self.space_from_lvl(top_left, i, curr_level), curr_level);
+                } else {
+                    let i = self.space_lvl_to_i(top_left, curr_level);
+                    self.next_legal = (self.space_from_lvl(top_left, i, curr_level + 1), curr_level + 1);
+                }
                 break;
             }
             curr_level += 1;
