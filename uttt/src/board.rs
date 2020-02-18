@@ -14,6 +14,16 @@ pub enum Player {
     DEAD,
 }
 
+
+#[derive(PartialEq)]
+#[derive(Clone, Copy)]
+#[derive(Debug)]
+#[derive(Hash)]
+#[derive(Eq)]
+pub struct Square {
+    pub top_left: usize,
+    pub level: usize,
+}
 // Each tile of the tic tac toe board is assigned an integer
 // One level:
 // 0 1 2
@@ -42,10 +52,10 @@ pub struct Board {
     // The squares that are occupied
     // Where the first element in the pair is the top left space of that square
     // the second element is the level
-    occupied: HashMap<(usize, usize), Player>,
+    occupied: HashMap<Square, Player>,
     // Tuple describing the upper left corner and level
     // of the next legal move space
-    next_legal: (usize, usize),
+    next_legal: Square,
     // The player that has won the game, or NEITHER if
     // the game is still ongoing
     pub winner: Player,
@@ -63,65 +73,66 @@ impl Board {
                 to_move: Player::X,
                 size:  size_,
                 occupied: HashMap::new(),
-                next_legal: (0, levels_ ),
+                next_legal: Square { top_left: 0, level: levels_},
                 levels: levels_,
                 winner: Player::NEITHER };
         for i in 0..(size_*size_) {
-            result.occupied.insert((i, 0), Player::NEITHER);
+            result.occupied.insert(Square {top_left: i, level: 0}, 
+                                   Player::NEITHER);
         }
         return result;
     }
 
+   // 00 01 02  09 10 11  18 19 20
+   // 03 04 05  12 13 14  21 22 23
+   // 06 07 08  15 16 17  24 25 26
+   //
+   // 27 28 29  36 37 38  45 46 47
+   // 30 31 32  39 40 41  48 49 50 
+   // 33 34 35  42 43 44  51 52 53
+   //
+   // 54 55 56  63 64 65  72 73 74
+   // 57 58 59  66 67 68  75 76 77
+   // 60 61 62  69 70 71  78 79 80
     pub fn pretty_print(&self) {
-        for i in 0..(self.size*self.size) {
-            match self.occupied.get(&(i, 0)) {
-                Some(Player::X) => print!("X "),
-                Some(Player::O) => print!("O "),
-                Some(Player::NEITHER) => print!("- "),
-                Some(Player::DEAD) => print!("+ "),
-                None => panic!("Invalid board state"),
+        for y in [0, 3, 6, 27, 30, 33, 54, 57, 60].iter() {
+            for x in [0, 1, 2, 9, 10, 11, 18, 19, 20].iter() {
+                let i = *y + *x;
+                match self.occupied.get(&Square {top_left: i, level: 0}) {
+                    Some(Player::X) => print!("X "),
+                    Some(Player::O) => print!("O "),
+                    Some(Player::NEITHER) => print!("- "),
+                    Some(Player::DEAD) => print!("+ "),
+                    None => panic!("Invalid board state"),
+                }
             }
-            if i % self.size == self.size - 1 {
-                println!("");
-            }
+            println!("");
         }
     }
 
-    // Gets the top left corner of the square that space is
-    // at level
-    fn space_lvl_to_top_left(&self, space: usize, level: usize) -> usize {
-       let _3pl = (3 as usize).pow(level as u32);
-       let _3pln = self.size * _3pl;
-       let i = space - (space % _3pl);
-       let l = i - (i % self.size);
-       (l - (l % _3pln)) + (i % self.size)
-    }
-
-    fn space_lvl_to_i(&self, space: usize, level: usize) -> usize {
-       let _3pl = (3 as usize).pow(level as u32);
-       let _3pln = self.size * _3pl;
-       let i = space - (space % _3pl);
-       if level != 0 {
-           let l = i - (i % self.size);
-           ((space % self.size) / _3pl) + 3 * (l / _3pln)
-       } else {
-           (i % 3) + 3 * (i/self.size)
-       }
+    fn bottom_right(&self, sqr: Square) -> usize {
+        if sqr.level == 0 {
+            sqr.top_left
+        } else {
+            self.bottom_right(self.descend(&sqr, 8))
+        }
     }
 
     // Is the given space in the move bounds for this turn?
     fn in_bounds(&self, space: usize) -> bool {
        //println!("{}", space);
        //println!("{}", self.space_lvl_to_top_left(space, self.next_legal.1));
-       self.space_lvl_to_top_left(space, self.next_legal.1)  == self.next_legal.0
+       space >= self.next_legal.top_left && 
+       space <= self.bottom_right(self.next_legal)
     }
 
     // make the next move on space space
     // returns true iff the move is legal
     // does not affect board state if the move is illegal
     pub fn make_move(&mut self, space: usize) -> bool {
+        let curr_sqr = Square {top_left: space, level: 0};
         // Make sure this square is available
-        if *self.occupied.get(&(space, 0)).unwrap() != Player::NEITHER {
+        if *self.occupied.get(&curr_sqr).unwrap() != Player::NEITHER {
             return false;
         }
         // Check if the move is in the legal bounds
@@ -129,52 +140,51 @@ impl Board {
             return false;
         }
         // Write this move to the board
-        self.occupied.insert((space, 0), self.to_move);
+        self.occupied.insert(curr_sqr, self.to_move);
         
-        // TODO: Update occupied and next_legal
         // Update occupied
-        let mut curr_level = 1;
+        let (mut _check_sqr, _) = self.ascend(&curr_sqr);
+        let &mut check_sqr = &mut _check_sqr;
         // Keep checking levels as long as the player made a capture
-        while curr_level <= self.levels {
-            let top_left = self.space_lvl_to_top_left(space, curr_level);
-            let victorious_player = self.check_victory(top_left, curr_level);
+        while check_sqr.level <= self.levels {
+            //let top_left = self.space_lvl_to_top_left(space, curr_level);
+            let victorious_player = self.check_victory(&check_sqr);
             if victorious_player != Player::NEITHER {
                 // This player now occupies this square
-                self.occupied.insert((top_left, curr_level), victorious_player);
+                self.occupied.insert(check_sqr, victorious_player);
                 let mut downward_movement = 0;
                 // Loop through all the level 0 spaces this square
                 // occupies and write Player::DEAD to them if they 
                 // are currently open
-                while downward_movement < self.size * (3 as usize).pow(curr_level as u32) {
+                /*while downward_movement < self.size * (3 as usize).pow(curr_level as u32) {
                     for i in 0..(3 as usize).pow(curr_level as u32) {
                         if *self.occupied.get(&(top_left + downward_movement + i, 0)).unwrap() == Player::NEITHER {
                             self.occupied.insert((top_left + downward_movement + i, 0), Player::DEAD);
                         }
                     }
                     downward_movement += self.size;
-                }
+                }*/
                 // If this is the top level, the capturing player
                 // wins the game
-                if curr_level == self.levels {
+                if check_sqr.level == self.levels {
                     self.winner = victorious_player;
                 }
             } else {
                 // No capture was made at this level, so stop checking
                 // and update the bounds for the next move accordingly
-                if curr_level == self.levels - 1 {
-                    println!("curr_level: {}", curr_level);
-                    let i = self.space_lvl_to_i(space, curr_level - 1);
-                    println!("i: {}", i);
-                    let new_top_left = self.space_lvl_to_top_left(top_left, curr_level + 1);
-                    self.next_legal = (self.space_from_lvl(new_top_left, curr_level, i), curr_level);
-                    println!("next_legal: {:?}", self.next_legal);
-                } else {
-                    let i = self.space_lvl_to_i(top_left, curr_level);
-                    self.next_legal = (self.space_from_lvl(top_left, curr_level + 1, i), curr_level + 1);
+                // No captures were made
+                if check_sqr.level == 1 {
+                    let (_, i) = self.ascend(&curr_sqr);
+                    let (highest_sqr, _) = self.ascend(&check_sqr);
+                    self.next_legal = self.descend(&highest_sqr, i);
                 }
+               /* if check_sqr.level == self.levels - 1 {
+                    self.next_legal = self.ascend();
+                } else {
+                }*/
                 break;
             }
-            curr_level += 1;
+            let (check_sqr, _) = self.ascend(&check_sqr);
         }
 
         // Move to the next player
@@ -205,23 +215,31 @@ impl Board {
    // 72 73 74  75 76 77  78 79 80
    // space_from_lvl(0, 0, 1) would return 01
    // while space_from_lvl(0, 1, 1) would return 03
-   fn space_from_lvl(&self, top_left: usize, level: usize, i: usize) -> usize {
-       let x_movement = (i % 3) * (3 as usize).pow(level as u32);
-       let y_movement = self.size * (i/3) * (3 as usize).pow(level as u32);
-       return top_left + x_movement + y_movement;
+   fn descend(&self, sqr: &Square, i: usize) -> Square {
+        Square { top_left: sqr.top_left + 
+                      i * (3 as usize).pow(2 * (sqr.level - 1) as u32), 
+                level: sqr.level - 1}
    } 
+
+   fn ascend(&self, sqr: &Square) -> (Square, usize) {
+       let f = sqr.top_left % (3 as usize).pow(2 * (sqr.level + 1) as u32);
+       let i = f / (3 as usize).pow((sqr.level*2) as u32);
+       let tl = sqr.top_left - i * (3 as usize).pow(2 * (sqr.level) as u32);
+       (Square {top_left: tl, level: sqr.level + 1}, i)
+   }
 
     // Determine if the square with space at its top left corner at level
     // where 0 is the lowest level (i.e. individual squares) has been 
     // won by a player
     // Returns the winner if so, returns NEITHER otherwise
-    pub fn check_victory(&self, top_left: usize, level: usize) -> Player {
+    pub fn check_victory(&self, sqr: &Square) -> Player {
         let mut this_board: Vec<Player> = Vec::with_capacity(9); 
         let mut counter = 0;
         this_board.resize_with(9, || {
             let i = counter;
             counter += 1;
-            match self.occupied.get(&(self.space_from_lvl(top_left, level - 1, i), level - 1)) {
+            let curr_sqr = self.descend(sqr, i);
+            match self.occupied.get(&(curr_sqr)) {
                 Some(p) => *p,
                 None => Player::NEITHER
             }
@@ -257,11 +275,6 @@ impl Board {
         }
 
         return Player::NEITHER;
-    }
-
-    // Determine the next legal move set
-    fn update_next_legal(&mut self) {
-
     }
 }
 
