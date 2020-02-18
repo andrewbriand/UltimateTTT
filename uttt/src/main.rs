@@ -52,10 +52,21 @@ fn main() {
     //assert!(!b.make_move(77));
     //assert!(b.make_move(32));
     //assert!(b.make_move(80));
+    let mut v = Vec::new();
     while true {
         let i: usize = read!();
+        if i == 900 {
+            break;
+        }
         println!("{}", b.make_move(i));
+        //println!("{:?}", b);
         b.pretty_print();
+        if b.winner != Player::NEITHER {
+            break;
+        }
+        v.push(i);
+        println!("{:?}", b.next_legal);
     }
-    println!("{:?}", b.winner);
+    println!("{:?} wins", b.winner);
+    println!("{:?}", v);
 }
