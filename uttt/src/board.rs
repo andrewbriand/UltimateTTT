@@ -314,4 +314,17 @@ mod tests {
          }
          assert!(b.winner == Player::O);
      }
+
+     #[test]
+     fn test_full_square_ascend_2lv() {
+         let mut b = Board::new(2);
+         let moves = vec![0, 1, 10, 9, 5, 45, 7, 70, 71, 80, 72, 4, 36, 8, 
+                          73, 11, 18, 2, 20, 21, 27, 3, 33, 54, 6, 
+                          61, 63, 13];
+         for i in moves {
+             assert!(b.make_move(i));
+             b.pretty_print();
+             println!("move: {}", i);
+         }
+     }
 }
