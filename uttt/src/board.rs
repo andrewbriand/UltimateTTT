@@ -382,4 +382,19 @@ mod tests {
              println!("move: {}", i);
          }
      }
+
+     #[test]
+     fn test_draw_2lv() {
+         let mut b = Board::new(2);
+         let moves = vec![0, 1, 9, 4, 36, 7, 70, 71, 79, 67, 43, 63, 20, 21, 
+                          31, 40, 37, 13, 38, 23, 49, 22, 10, 14, 52, 55, 11, 
+                          50, 46, 30, 29, 27, 32, 33, 58, 78, 59, 72, 57, 73, 74, 
+                          76, 77, 80];
+         for i in moves {
+             assert!(b.make_move(i));
+             b.pretty_print();
+             println!("move: {}", i);
+         }
+         assert!(b.winner == Player::DEAD);
+     }
 }
