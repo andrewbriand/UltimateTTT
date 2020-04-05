@@ -18,10 +18,10 @@ pub enum Player {
 // Definitions:
 // Space - the smallest unit of the board, where a player can place
 //         an X or O
-// Square - A square is either: This definition is bad I'll fix it
+// Square - A square is either:
 //              1. A single space
 //              2. A collection of 9 squares
-// 
+// Drawn - A square is drawn if all of its subsquares are occupied
 
 #[derive(PartialEq)]
 #[derive(Clone, Copy)]
@@ -142,7 +142,6 @@ impl Board {
     // Is the given space in the move bounds for this turn?
     fn in_bounds(&self, space: usize) -> bool {
        //println!("{}", space);
-       //println!("{}", self.space_lvl_to_top_left(space, self.next_legal.1));
        space >= self.next_legal.top_left && 
        space <= self.bottom_right(self.next_legal)
     }
@@ -181,14 +180,13 @@ impl Board {
         let check_sqr = &mut _check_sqr;
         // Keep checking levels as long as the player made a capture
         while check_sqr.level <= self.levels {
-            //let top_left = self.space_lvl_to_top_left(space, curr_level);
             let victorious_player = self.check_victory(&check_sqr);
             if victorious_player != Player::NEITHER {
-                // This player now occupies this square
+                // This player or DEAD now occupies this square
                 self.occupied.insert(*check_sqr, victorious_player);
                 self.mark_as_dead(check_sqr);
                 // If this is the top level, the capturing player
-                // wins the game
+                // wins the game, or the game is drawn (winner = DEAD)
                 if check_sqr.level == self.levels {
                     self.winner = victorious_player;
                 }
@@ -272,7 +270,9 @@ impl Board {
     // Determine if the square with space at its top left corner at level
     // where 0 is the lowest level (i.e. individual squares) has been 
     // won by a player
-    // Returns the winner if so, returns NEITHER otherwise
+    // Returns the winner if so, returns NEITHER if no player has won
+    // and returns DEAD if the square is drawn (i.e all of its
+    // subsquares are occupied)
     pub fn check_victory(&self, sqr: &Square) -> Player {
         let mut this_board: Vec<Player> = Vec::with_capacity(9); 
         // Put the owners of the 9 subsquares
@@ -324,6 +324,18 @@ impl Board {
             }
         }
 
+        // Check for draw
+        let mut draw = true;
+        for i in 0..9 {
+            if this_board[i] == Player::NEITHER {
+                draw = false;
+                break;
+            }
+        }
+
+        if draw {
+            return Player::DEAD;
+        }
         return Player::NEITHER;
     }
 }
