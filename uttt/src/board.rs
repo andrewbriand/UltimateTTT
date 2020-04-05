@@ -38,11 +38,11 @@ pub struct Square {
     pub level: usize,
 }
 // Each tile of the tic tac toe board is assigned an integer
-// One level:
+// max_level = 1:
 // 0 1 2
 // 3 4 5
 // 6 7 8
-// Two levels:
+// max_level = 2:
 // 00 01 02  09 10 11  18 19 20
 // 03 04 05  12 13 14  21 22 23
 // 06 07 08  15 16 17  24 25 26
@@ -58,9 +58,10 @@ pub struct Square {
 // top left corner at 00 and its bottom right corner at 08
 #[derive(Debug)]
 pub struct Board {
-    // the number of levels in the board where
-    // 1 is a standard 3x3 tic-tac-toe board
-    levels: usize,
+    // the index of the top level in the board e.g.
+    // max_level = 1 is a standard 3x3 tic-tac-toe board
+    // max_level = 2 is a 9x9 tic-tac-toe board
+    max_level: usize,
     // The player who will make the next move
     to_move: Player,
     // Maps squares to their occupation status
@@ -75,20 +76,20 @@ pub struct Board {
 }
 
 impl Board {
-    // Creates a new board with levels_ levels
+    // Creates a new board with max level max_level_
     // where 1 is a standard 3x3 tic-tac-toe board,
     // 2 is a 9x9 board, etc.
-    pub fn new(levels_: usize) -> Board {
-        if levels_ < 1 {
-            panic!("levels_ must be >= 1");
+    pub fn new(max_level_: usize) -> Board {
+        if max_level_ < 1 {
+            panic!("max_level_ must be >= 1");
         }
-        let size_ = (3 as usize).pow(levels_ as u32);
+        let size_ = (3 as usize).pow(max_level_ as u32);
         let mut result = Board {
                 to_move: Player::X, // X goes first
                 occupied: HashMap::new(),
                 // first move can be anywhere
-                next_legal: Square { top_left: 0, level: levels_},
-                levels: levels_,
+                next_legal: Square { top_left: 0, level: max_level_},
+                max_level: max_level_,
                 winner: Player::NEITHER };
         // TODO: it might be cleaner to initialize all squares (including
         // higher level ones) with NEITHER
@@ -179,7 +180,7 @@ impl Board {
         let (mut _check_sqr, _) = self.ascend(&move_sqr);
         let check_sqr = &mut _check_sqr;
         // Keep checking levels as long as the player made a capture
-        while check_sqr.level <= self.levels {
+        while check_sqr.level <= self.max_level {
             let victorious_player = self.check_victory(&check_sqr);
             if victorious_player != Player::NEITHER {
                 // This player or DEAD now occupies this square
@@ -187,7 +188,7 @@ impl Board {
                 self.mark_as_dead(check_sqr);
                 // If this is the top level, the capturing player
                 // wins the game, or the game is drawn (winner = DEAD)
-                if check_sqr.level == self.levels {
+                if check_sqr.level == self.max_level {
                     self.winner = victorious_player;
                 }
             } else {
