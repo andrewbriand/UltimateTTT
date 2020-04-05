@@ -6,14 +6,22 @@ use std::collections::HashMap;
 pub enum Player {
     X,
     O,
-    // Neither player has played in this square yet
+    // Neither player occupies this square
     NEITHER,
-    // Neither player has played in this square,
-    // but it can never be played in because it is
-    // in a higher occupied square
+    // Neither player occupies this square,
+    // but it can never be occupied because it is
+    // in a higher occupied square or is drawn
     DEAD,
 }
 
+
+// Definitions:
+// Space - the smallest unit of the board, where a player can place
+//         an X or O
+// Square - A square is either: This definition is bad I'll fix it
+//              1. A single space
+//              2. A collection of 9 squares
+// 
 
 #[derive(PartialEq)]
 #[derive(Clone, Copy)]
@@ -21,7 +29,12 @@ pub enum Player {
 #[derive(Hash)]
 #[derive(Eq)]
 pub struct Square {
+    // the integer corresponding to the 
+    // space in the top left corner of this square
     pub top_left: usize,
+    // level 0 is an individual space,
+    // level 1 is a 3x3 board, 
+    // level 2 is a 9x9 board, etc
     pub level: usize,
 }
 // Each tile of the tic tac toe board is assigned an integer
@@ -42,40 +55,43 @@ pub struct Square {
 // 57 58 59  66 67 68  75 76 77
 // 60 61 62  69 70 71  78 79 80
 // In the above example, (space: 0, level 1) is the square with its
-// top left corner at 00 and its bottom right corner at 20
+// top left corner at 00 and its bottom right corner at 08
 #[derive(Debug)]
 pub struct Board {
-    // the number of level in the board where
+    // the number of levels in the board where
     // 1 is a standard 3x3 tic-tac-toe board
     levels: usize,
     // The player who will make the next move
     to_move: Player,
-    // The squares that are occupied
-    // Where the first element in the pair is the top left space of that square
-    // the second element is the level
+    // Maps squares to their occupation status
     occupied: HashMap<Square, Player>,
     // Tuple describing the upper left corner and level
     // of the next legal move space
     pub next_legal: Square,
     // The player that has won the game, or NEITHER if
     // the game is still ongoing
+    // winner is DEAD if the game is drawn
     pub winner: Player,
 }
 
 impl Board {
-    // Creates a new board with size size_
-    // size_ must be a power of three greater than or equal to 3
+    // Creates a new board with levels_ levels
+    // where 1 is a standard 3x3 tic-tac-toe board,
+    // 2 is a 9x9 board, etc.
     pub fn new(levels_: usize) -> Board {
         if levels_ < 1 {
             panic!("levels_ must be >= 1");
         }
         let size_ = (3 as usize).pow(levels_ as u32);
         let mut result = Board {
-                to_move: Player::X,
+                to_move: Player::X, // X goes first
                 occupied: HashMap::new(),
+                // first move can be anywhere
                 next_legal: Square { top_left: 0, level: levels_},
                 levels: levels_,
                 winner: Player::NEITHER };
+        // TODO: it might be cleaner to initialize all squares (including
+        // higher level ones) with NEITHER
         for i in 0..(size_*size_) {
             result.occupied.insert(Square {top_left: i, level: 0}, 
                                    Player::NEITHER);
@@ -95,6 +111,8 @@ impl Board {
    // 57 58 59  66 67 68  75 76 77
    // 60 61 62  69 70 71  78 79 80
     pub fn pretty_print(&self) {
+        // TODO: generalize this to n-levels
+        // print rows in order
         for y in [0, 3, 6, 27, 30, 33, 54, 57, 60].iter() {
             for x in [0, 1, 2, 9, 10, 11, 18, 19, 20].iter() {
                 let i = *y + *x;
@@ -103,6 +121,7 @@ impl Board {
                     Some(Player::O) => print!("O "),
                     Some(Player::NEITHER) => print!("- "),
                     Some(Player::DEAD) => print!("+ "),
+                    // TODO: there must be a cleaner way to do this
                     None => panic!("Invalid board state"),
                 }
             }
@@ -110,6 +129,8 @@ impl Board {
         }
     }
 
+    // Return the integer corresponding to the bottom
+    // right space of sqr
     fn bottom_right(&self, sqr: Square) -> usize {
         if sqr.level == 0 {
             sqr.top_left
@@ -126,6 +147,7 @@ impl Board {
        space <= self.bottom_right(self.next_legal)
     }
 
+    // Mark any spaces marked NEITHER in sqr as DEAD
     fn mark_as_dead(&mut self, sqr: &Square) {
         if sqr.level == 0 {
             if *self.occupied.get(sqr).unwrap() == Player::NEITHER {
@@ -142,9 +164,9 @@ impl Board {
     // returns true iff the move is legal
     // does not affect board state if the move is illegal
     pub fn make_move(&mut self, space: usize) -> bool {
-        let curr_sqr = Square {top_left: space, level: 0};
+        let move_sqr = Square {top_left: space, level: 0};
         // Make sure this square is available
-        if *self.occupied.get(&curr_sqr).unwrap() != Player::NEITHER {
+        if *self.occupied.get(&move_sqr).unwrap() != Player::NEITHER {
             return false;
         }
         // Check if the move is in the legal bounds
@@ -152,10 +174,10 @@ impl Board {
             return false;
         }
         // Write this move to the board
-        self.occupied.insert(curr_sqr, self.to_move);
+        self.occupied.insert(move_sqr, self.to_move);
         
         // Update occupied
-        let (mut _check_sqr, _) = self.ascend(&curr_sqr);
+        let (mut _check_sqr, _) = self.ascend(&move_sqr);
         let check_sqr = &mut _check_sqr;
         // Keep checking levels as long as the player made a capture
         while check_sqr.level <= self.levels {
@@ -173,12 +195,25 @@ impl Board {
             } else {
                 // No capture was made at this level, so stop checking
                 // and update the bounds for the next move accordingly
-
-                // No captures were made
-                let (mid_square, i) = self.ascend(&curr_sqr);
+                // Ascend from the space the move was made in
+                // and save which subsquare it was
+                let (mid_square, i) = self.ascend(&move_sqr);
+                // Ascend again, and then descend into our next
+                // legal move space using the saved subsquare number
                 let (highest_sqr, _) = self.ascend(&mid_square);
                 self.next_legal = self.descend(&highest_sqr, i);
-                if self.occupied.contains_key(&self.next_legal) {
+                // If the calculated move space is occupied, ascend the legal
+                // move space until it is not
+                //
+                // Note: this assumes unoccupied spaces (which
+                // could reasonably be marked NEITHER but aren't
+                // currently) in levels
+                // higher than 0 are not in the occupied map
+                //
+                // We know that this will not result in a next_legal
+                // larger than the entire board, because we have already
+                // determined that the board is not drawn or won
+                while self.occupied.contains_key(&self.next_legal) {
                     let (temp, _) = self.ascend(&self.next_legal);
                     self.next_legal = temp;
                 }
@@ -196,7 +231,7 @@ impl Board {
         return true;
     }
 
-   // Transforms with respect to a top-left square at a given level
+   // Return one of the nine sub-squares that make up sqr
    // where i is one of
    // 0 1 2
    // 3 4 5
@@ -214,13 +249,19 @@ impl Board {
    // 57 58 59  66 67 68  75 76 77
    // 60 61 62  69 70 71  78 79 80
    // Descend((54, 1), 2) gives (56, 0)
-   // Descend((0, 2), 8) gives 72
+   // Descend((0, 2), 8) gives (72, 1)
    fn descend(&self, sqr: &Square, i: usize) -> Square {
         Square { top_left: sqr.top_left + 
                       i * (3 as usize).pow(2 * (sqr.level - 1) as u32), 
                 level: sqr.level - 1}
    } 
 
+   // Return the square that contains sub-square sqr
+   // and which subsquare it was, where sub-squares are numbered
+   // as follows:
+   // 0 1 2
+   // 3 4 5
+   // 6 7 8
    fn ascend(&self, sqr: &Square) -> (Square, usize) {
        let f = sqr.top_left % (3 as usize).pow(2 * (sqr.level + 1) as u32);
        let i = f / (3 as usize).pow((sqr.level*2) as u32);
@@ -234,12 +275,13 @@ impl Board {
     // Returns the winner if so, returns NEITHER otherwise
     pub fn check_victory(&self, sqr: &Square) -> Player {
         let mut this_board: Vec<Player> = Vec::with_capacity(9); 
+        // Put the owners of the 9 subsquares
+        // composing sqr into this_board
         let mut counter = 0;
         this_board.resize_with(9, || {
-            let i = counter;
+            let move_sqr = self.descend(sqr, counter);
             counter += 1;
-            let curr_sqr = self.descend(sqr, i);
-            match self.occupied.get(&(curr_sqr)) {
+            match self.occupied.get(&(move_sqr)) {
                 Some(p) => *p,
                 None => Player::NEITHER
             }
