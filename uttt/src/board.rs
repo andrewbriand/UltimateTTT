@@ -74,6 +74,10 @@ pub struct Board {
     // the game is still ongoing
     // winner is DEAD if the game is drawn
     pub winner: Player,
+    // The moves that have been made up until this point
+    // where move_history[move_history.len() - 1] is the last
+    // move made
+    move_history: Vec<usize>,
 }
 
 impl Board {
@@ -91,7 +95,8 @@ impl Board {
                 // first move can be anywhere
                 next_legal: Square { top_left: 0, level: max_level_},
                 max_level: max_level_,
-                winner: Player::NEITHER };
+                winner: Player::NEITHER,
+                move_history: Vec::new() };
         // TODO: it might be cleaner to initialize all squares (including
         // higher level ones) with NEITHER
         for i in 0..(size_*size_) {
@@ -161,6 +166,19 @@ impl Board {
         }
     }
 
+    // Mark any spaces marked DEAD in sqr as NEITHER
+    fn mark_as_neither(&mut self, sqr: &Square) {
+        if sqr.level == 0 {
+            if *self.occupied.get(sqr).unwrap() == Player::DEAD {
+                self.occupied.insert(*sqr, Player::NEITHER);
+            }
+        } else {
+            for i in 0..9 {
+                self.mark_as_neither(&self.descend(sqr, i));
+            }
+        }
+    }
+
     // Push all spaces that are marked NEITHER in sqr
     // to vec
     fn get_open_spaces(&self, sqr: Square, vec: &mut Vec<usize>) {
@@ -182,6 +200,43 @@ impl Board {
         return vec;
     }
 
+    // Update the bounds for the next move
+    // to be as if move_sqr was the last move made
+    fn update_move_bounds(&mut self, move_sqr: &Square) {
+        // Update the bounds for the next move
+        // Ascend from the space the move was made in
+        // and save which subsquare it was
+        let (mid_square, i) = self.ascend(move_sqr);
+        // Ascend again, and then descend into our next
+        // legal move space using the saved subsquare number
+        let (highest_sqr, _) = self.ascend(&mid_square);
+        self.next_legal = self.descend(&highest_sqr, i);
+        // If the calculated move space is occupied, ascend the legal
+        // move space until it is not
+        //
+        // Note: this assumes unoccupied squares (which
+        // could reasonably be marked NEITHER but aren't
+        // currently) in levels
+        // higher than 0 are not in the occupied map
+        //
+        // We know that this will not result in a next_legal
+        // larger than the entire board, because we have already
+        // determined that the board is not drawn or won
+        while self.occupied.contains_key(&self.next_legal) {
+            let (temp, _) = self.ascend(&self.next_legal);
+            self.next_legal = temp;
+        }
+    }
+
+    // Switch to_move to the next player
+    fn next_player(&mut self) {
+        if self.to_move == Player::X {
+            self.to_move = Player::O;
+        } else {
+            self.to_move = Player::X;
+        }
+    }
+
     // make the next move on space space
     // returns true iff the move is legal
     // does not affect board state if the move is illegal
@@ -197,11 +252,13 @@ impl Board {
         }
         // Write this move to the board
         self.occupied.insert(move_sqr, self.to_move);
+        // Put the move into the move history
+        self.move_history.push(space);
         
         // Update occupied
         let (mut _check_sqr, _) = self.ascend(&move_sqr);
         let check_sqr = &mut _check_sqr;
-        // Keep checking levels as long as the player made a capture
+        // Check levels for captures
         while check_sqr.level <= self.max_level {
             let victorious_player = self.check_victory(&check_sqr);
             if victorious_player != Player::NEITHER {
@@ -214,41 +271,67 @@ impl Board {
                     self.winner = victorious_player;
                 }
             } else {
-                // No capture was made at this level, so stop checking
-                // and update the bounds for the next move accordingly
-                // Ascend from the space the move was made in
-                // and save which subsquare it was
-                let (mid_square, i) = self.ascend(&move_sqr);
-                // Ascend again, and then descend into our next
-                // legal move space using the saved subsquare number
-                let (highest_sqr, _) = self.ascend(&mid_square);
-                self.next_legal = self.descend(&highest_sqr, i);
-                // If the calculated move space is occupied, ascend the legal
-                // move space until it is not
-                //
-                // Note: this assumes unoccupied spaces (which
-                // could reasonably be marked NEITHER but aren't
-                // currently) in levels
-                // higher than 0 are not in the occupied map
-                //
-                // We know that this will not result in a next_legal
-                // larger than the entire board, because we have already
-                // determined that the board is not drawn or won
-                while self.occupied.contains_key(&self.next_legal) {
-                    let (temp, _) = self.ascend(&self.next_legal);
-                    self.next_legal = temp;
-                }
+                // If no capture or draw happened at this level,
+                // then none can happen at any higher levels
                 break;
             }
             let (_check_sqr, _) = self.ascend(check_sqr);
             *check_sqr = _check_sqr;
         }
-        // Move to the next player
-        if self.to_move == Player::X {
-            self.to_move = Player::O;
-        } else {
-            self.to_move = Player::X;
+
+        self.update_move_bounds(&move_sqr);
+        self.next_player();
+        return true;
+    }
+
+    // Undo the most recent move unless no moves have been made
+    // in which case does nothing
+    // Returns false iff no moves have been made
+    pub fn undo_move(&mut self) -> bool {
+        // remove the move from the history
+        let space = match self.move_history.pop() {
+            Some(s) => s,
+            None => return false;
+        };
+        let move_sqr = Square {top_left: space, level: 0};
+        // Remove this move from the board
+        self.occupied.insert(move_sqr, Player::NEITHER);
+        
+        // Update occupied
+        let (mut _check_sqr, _) = self.ascend(&move_sqr);
+        let check_sqr = &mut _check_sqr;
+        // Check every level to see if removing the move changed the
+        // status of any of them
+        while check_sqr.level <= self.max_level {
+            let victorious_player = self.check_victory(&check_sqr);
+            if victorious_player == Player::NEITHER {
+                // Neither player occupies this square
+                if self.occupied.contains_key(check_sqr) {
+                    self.occupied.remove(check_sqr);
+                }
+                self.mark_as_neither(check_sqr);
+
+                if check_sqr.level == self.max_level {
+                    // The game was over, but now it is not
+                    self.winner = Player::NEITHER;
+                }
+            }
+            let (_check_sqr, _) = self.ascend(check_sqr);
+            *check_sqr = _check_sqr;
         }
+        // Update the move bounds based on the new preceding move
+        let move_history_len = self.move_history.len();
+        // if we are back to the beginning of the game
+        if move_history_len == 0 {
+           self.next_legal = Square { top_left: 0, level: self.max_level };
+        } else {
+            let preceding_move = 
+                Square {top_left: self.move_history[move_history_len - 1], 
+                        level: 0};
+            self.update_move_bounds(&preceding_move);
+        }
+        // Move to the last (same as next) player
+        self.next_player();
         return true;
     }
 
@@ -420,6 +503,76 @@ mod tests {
          assert!(b.winner == Player::DEAD);
      }
 
+     #[test]
+     fn test_basic_undo_2lv() {
+         let mut b = Board::new(2);
+         let moves = vec![20, 22, 38, 21, 29, 23, 50, 49, 41, 46, 14, 52];
+         for i in &moves {
+             assert!(b.make_move(*i));
+             assert!(b.undo_move());
+             assert!(b.make_move(*i));
+             b.pretty_print();
+             println!("move: {}", *i);
+         }
+         assert!(b.make_move(68));
+         assert!(!b.make_move(48));
+
+         for _i in 0..(moves.len()+1) {
+             assert!(b.undo_move());
+         }
+
+         for i in &moves {
+             assert!(b.make_move(*i));
+             assert!(b.undo_move());
+             assert!(b.make_move(*i));
+             b.pretty_print();
+             println!("move: {}", *i);
+         }
+         assert!(b.make_move(68));
+         assert!(!b.make_move(48));
+     }
+
+     #[test]
+     fn test_basic_victory_undo_2lv() {
+         let mut b = Board::new(2);
+         let moves = vec![0, 3, 27, 4, 36, 5, 46, 13, 37, 12, 28, 14, 47, 22, 38, 21, 29, 23];
+         for i in &moves {
+             assert!(b.make_move(*i));
+             assert!(b.undo_move());
+             assert!(b.make_move(*i));
+             b.pretty_print();
+             println!("move: {}", *i);
+         }
+         assert!(b.winner == Player::O);
+         for _i in 0..moves.len() {
+             assert!(b.undo_move());
+         }
+
+         for i in &moves {
+             assert!(b.make_move(*i));
+             assert!(b.undo_move());
+             assert!(b.make_move(*i));
+             b.pretty_print();
+             println!("move: {}", *i);
+         }
+         assert!(b.winner == Player::O);
+     }
+
+     #[test]
+     fn test_full_square_ascend_undo_2lv() {
+         let mut b = Board::new(2);
+         let moves = vec![0, 1, 10, 9, 5, 45, 7, 70, 71, 80, 72, 4, 36, 8, 
+                          73, 11, 18, 2, 20, 21, 27, 3, 33, 54, 6, 
+                          61, 63, 13];
+         for i in moves {
+             assert!(b.make_move(i));
+             assert!(b.undo_move());
+             assert!(b.make_move(i));
+             b.pretty_print();
+             println!("move: {}", i);
+         }
+     }
+
      fn get_moves_at_depths(b: &mut Board, depth: usize, out: &mut Vec<usize>) {
          if depth == 0 {
              return;
@@ -434,11 +587,25 @@ mod tests {
          }
      }
 
+     fn get_moves_at_depths_undo(b: &mut Board, depth: usize, out: &mut Vec<usize>) {
+         if depth == 0 {
+             return;
+         }
+         let moves = b.get_moves();
+         let out_len = out.len();
+         out[out_len - depth] += moves.len();
+         for m in moves {
+             assert!(b.make_move(m));
+             get_moves_at_depths_undo(b, depth - 1, out);
+             assert!(b.undo_move());
+         }
+     }
+
      #[test]
      #[ignore]
      fn test_move_gen_2lv() {
          let mut b = Board::new(2);
-         let depth = 6;
+         let depth = 7;
          println!("Level\tMoves");
          let mut levels = Vec::new();
          for _i in 0..depth {
