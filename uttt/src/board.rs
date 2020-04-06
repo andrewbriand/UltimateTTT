@@ -291,7 +291,7 @@ impl Board {
         // remove the move from the history
         let space = match self.move_history.pop() {
             Some(s) => s,
-            None => return false;
+            None => return false
         };
         let move_sqr = Square {top_left: space, level: 0};
         // Remove this move from the board
