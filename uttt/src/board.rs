@@ -57,6 +57,7 @@ pub struct Square {
 // In the above example, (space: 0, level 1) is the square with its
 // top left corner at 00 and its bottom right corner at 08
 #[derive(Debug)]
+#[derive(Clone)]
 pub struct Board {
     // the index of the top level in the board e.g.
     // max_level = 1 is a standard 3x3 tic-tac-toe board
@@ -158,6 +159,27 @@ impl Board {
                 self.mark_as_dead(&self.descend(sqr, i));
             }
         }
+    }
+
+    // Push all spaces that are marked NEITHER in sqr
+    // to vec
+    fn get_open_spaces(&self, sqr: Square, vec: &mut Vec<usize>) {
+        if sqr.level == 0 {
+            if *self.occupied.get(&sqr).unwrap() == Player::NEITHER {
+                vec.push(sqr.top_left);
+            }
+        } else {
+            for i in 0..9 {
+                self.get_open_spaces(self.descend(&sqr, i), vec);
+            }
+        }
+    }
+
+    // Returns a vector of the current legal moves
+    pub fn get_moves(&self) -> Vec<usize> {
+        let mut vec = Vec::new();
+        self.get_open_spaces(self.next_legal, &mut vec);
+        return vec;
     }
 
     // make the next move on space space
@@ -396,5 +418,37 @@ mod tests {
              println!("move: {}", i);
          }
          assert!(b.winner == Player::DEAD);
+     }
+
+     fn get_moves_at_depths(b: &mut Board, depth: usize, out: &mut Vec<usize>) {
+         if depth == 0 {
+             return;
+         }
+         let moves = b.get_moves();
+         let out_len = out.len();
+         out[out_len - depth] += moves.len();
+         for m in moves {
+             let mut next_b = b.clone();
+             assert!(next_b.make_move(m));
+             get_moves_at_depths(&mut next_b, depth - 1, out);
+         }
+     }
+
+     #[test]
+     #[ignore]
+     fn test_move_gen_2lv() {
+         let mut b = Board::new(2);
+         let depth = 6;
+         println!("Level\tMoves");
+         let mut levels = Vec::new();
+         for _i in 0..depth {
+             levels.push(0);
+         }
+         get_moves_at_depths(&mut b, depth, &mut levels);
+         for i in 0..depth {
+             print!("{}", i);
+             print!("\t");
+             println!("{}", levels[i]);
+         }
      }
 }
