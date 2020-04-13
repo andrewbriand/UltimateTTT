@@ -1,4 +1,5 @@
 use std::collections::HashMap;
+use std::thread;
 
 #[derive(PartialEq)]
 #[derive(Clone, Copy)]
@@ -303,17 +304,20 @@ impl Board {
         // Check every level to see if removing the move changed the
         // status of any of them
         while check_sqr.level <= self.max_level {
-            let victorious_player = self.check_victory(&check_sqr);
-            if victorious_player == Player::NEITHER {
-                // Neither player occupies this square
-                if self.occupied.contains_key(check_sqr) {
-                    self.occupied.remove(check_sqr);
-                }
+            if self.occupied.contains_key(check_sqr) {
                 self.mark_as_neither(check_sqr);
+                let victorious_player = self.check_victory(&check_sqr);
+                if victorious_player == Player::NEITHER {
+                    // Neither player occupies this square anymore
+                    self.occupied.remove(check_sqr);
 
-                if check_sqr.level == self.max_level {
-                    // The game was over, but now it is not
-                    self.winner = Player::NEITHER;
+                    if check_sqr.level == self.max_level {
+                        // The game was over, but now it is not
+                        self.winner = Player::NEITHER;
+                    }
+                } else {
+                    self.mark_as_dead(check_sqr);
+                    break;
                 }
             }
             let (_check_sqr, _) = self.ascend(check_sqr);
@@ -594,24 +598,57 @@ mod tests {
          let moves = b.get_moves();
          let out_len = out.len();
          out[out_len - depth] += moves.len();
-         for m in moves {
-             assert!(b.make_move(m));
+         for m in &moves {
+             if !b.make_move(*m) {
+                 b.pretty_print();
+                 println!("{}", *m);
+                 println!("{:?}", b.next_legal);
+                 println!("{:?}", moves);
+                 println!("{:?}", b.get_moves());
+                 assert!(false);
+             }
              get_moves_at_depths_undo(b, depth - 1, out);
              assert!(b.undo_move());
+             if moves != b.get_moves() {
+                 println!("After undo: {:?}", b.get_moves());
+                 println!("Before undo: {:?}", moves);
+                 assert!(false);
+             }
          }
      }
+
+     /*fn get_moves_at_depths_thread(other_b: &Board, depth: usize, out: &mut Vec<usize>) {
+         if depth == 0 {
+             return;
+         }
+         let b = other_b.clone();
+         let moves = b.get_moves();
+         let out_len = out.len();
+         out[out_len - depth] += moves.len();
+         let threads = Vec::new();
+         for m in &moves {
+             assert!(b.make_move(*m));
+             get_moves_at_depths_undo(b, depth - 1, out);
+             assert!(b.undo_move());
+             if moves != b.get_moves() {
+                 println!("After undo: {:?}", b.get_moves());
+                 println!("Before undo: {:?}", moves);
+                 assert!(false);
+             }
+         }
+     }*/
 
      #[test]
      #[ignore]
      fn test_move_gen_2lv() {
          let mut b = Board::new(2);
-         let depth = 7;
+         let depth = 9;
          println!("Level\tMoves");
          let mut levels = Vec::new();
          for _i in 0..depth {
              levels.push(0);
          }
-         get_moves_at_depths(&mut b, depth, &mut levels);
+         get_moves_at_depths_undo(&mut b, depth, &mut levels);
          for i in 0..depth {
              print!("{}", i);
              print!("\t");
