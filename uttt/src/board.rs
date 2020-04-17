@@ -1,5 +1,6 @@
 use std::collections::HashMap;
 use std::thread;
+use std::time::Instant;
 
 #[derive(PartialEq)]
 #[derive(Clone, Copy)]
@@ -139,24 +140,45 @@ impl Board {
 
     // Return the integer corresponding to the bottom
     // right space of sqr
-    fn bottom_right(&self, sqr: Square) -> usize {
-        if sqr.level == 0 {
+    fn bottom_right(sqr: Square) -> usize {
+        /*if sqr.level == 0 {
             sqr.top_left
         } else {
-            self.bottom_right(self.descend(&sqr, 8))
-        }
+            bottom_right(self.descend(&sqr, 8))
+        }*/
+        return sqr.top_left + 3_usize.pow(2 * (sqr.level) as u32) - 1;
     }
 
     // Is the given space in the move bounds for this turn?
     fn in_bounds(&self, space: usize) -> bool {
        //println!("{}", space);
        space >= self.next_legal.top_left && 
-       space <= self.bottom_right(self.next_legal)
+       space <= Board::bottom_right(self.next_legal)
+    }
+
+    // Applies f to every space in sqr
+    fn apply_to_spaces<F>(sqr: &Square, mut f: F) 
+        where F: FnMut(&Square) {
+        for i in sqr.top_left..=Board::bottom_right(*sqr) {
+            f(&Square {top_left: i, level: 0});
+        }
     }
 
     // Mark any spaces marked NEITHER in sqr as DEAD
     fn mark_as_dead(&mut self, sqr: &Square) {
-        if sqr.level == 0 {
+        let f = |s: &Square| {
+            if *self.occupied.get(s).unwrap() == Player::NEITHER {
+                self.occupied.insert(*s, Player::DEAD);
+            }
+        };
+        Board::apply_to_spaces(sqr, f);
+        /*for i in sqr.top_left..self.bottom_right(*sqr) {
+            let s = &Square {top_left : i, level: 0};
+            if *self.occupied.get(s).unwrap() == Player::NEITHER {
+                self.occupied.insert(*s, Player::DEAD);
+            }
+        }*/
+        /*if sqr.level == 0 {
             if *self.occupied.get(sqr).unwrap() == Player::NEITHER {
                 self.occupied.insert(*sqr, Player::DEAD);
             }
@@ -164,7 +186,7 @@ impl Board {
             for i in 0..9 {
                 self.mark_as_dead(&self.descend(sqr, i));
             }
-        }
+        }*/
     }
 
     // Mark any spaces marked DEAD in sqr as NEITHER
@@ -599,6 +621,7 @@ mod tests {
          let out_len = out.len();
          out[out_len - depth] += moves.len();
          for m in &moves {
+             let temp = out[out_len - 1];
              if !b.make_move(*m) {
                  b.pretty_print();
                  println!("{}", *m);
@@ -609,6 +632,9 @@ mod tests {
              }
              get_moves_at_depths_undo(b, depth - 1, out);
              assert!(b.undo_move());
+             if depth == out_len  {
+                //println!("{}: {}", *m, out[out_len - 1] - temp);
+             }
              if moves != b.get_moves() {
                  println!("After undo: {:?}", b.get_moves());
                  println!("Before undo: {:?}", moves);
@@ -635,20 +661,22 @@ mod tests {
                  println!("Before undo: {:?}", moves);
                  assert!(false);
              }
-         }
+         }sdfasdf
      }*/
 
      #[test]
      #[ignore]
      fn test_move_gen_2lv() {
          let mut b = Board::new(2);
-         let depth = 9;
+         let depth = 7; // actually depth + 1
          println!("Level\tMoves");
          let mut levels = Vec::new();
          for _i in 0..depth {
              levels.push(0);
          }
+         let now = Instant::now();
          get_moves_at_depths_undo(&mut b, depth, &mut levels);
+         println!("Search took {} seconds", now.elapsed().as_secs());
          for i in 0..depth {
              print!("{}", i);
              print!("\t");
