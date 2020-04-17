@@ -67,7 +67,9 @@ pub struct Board {
     max_level: usize,
     // The player who will make the next move
     to_move: Player,
-    // Maps squares to their occupation status
+    // Spaces and their occupation status
+    spaces: Vec<Player>,
+    // Maps higher level squares to their occupation status
     occupied: HashMap<Square, Player>,
     // Tuple describing the upper left corner and level
     // of the next legal move space
@@ -80,6 +82,8 @@ pub struct Board {
     // where move_history[move_history.len() - 1] is the last
     // move made
     move_history: Vec<usize>,
+    // The size in spaces of a square at level index <= max_level
+    level_sizes: Vec<usize>,
 }
 
 impl Board {
@@ -98,12 +102,16 @@ impl Board {
                 next_legal: Square { top_left: 0, level: max_level_},
                 max_level: max_level_,
                 winner: Player::NEITHER,
-                move_history: Vec::new() };
+                move_history: Vec::new(),
+                level_sizes: Vec::new() };
         // TODO: it might be cleaner to initialize all squares (including
         // higher level ones) with NEITHER
         for i in 0..(size_*size_) {
             result.occupied.insert(Square {top_left: i, level: 0}, 
                                    Player::NEITHER);
+        }
+        for i in 0..=result.max_level+1 {
+            result.level_sizes.push((3 as usize).pow(2*i as u32));
         }
         return result;
     }
@@ -138,66 +146,37 @@ impl Board {
         }
     }
 
+    //fn get(&self, sqr: Square)
+
     // Return the integer corresponding to the bottom
     // right space of sqr
-    fn bottom_right(sqr: Square) -> usize {
-        /*if sqr.level == 0 {
-            sqr.top_left
-        } else {
-            bottom_right(self.descend(&sqr, 8))
-        }*/
-        return sqr.top_left + 3_usize.pow(2 * (sqr.level) as u32) - 1;
+    fn bottom_right(&self, sqr: Square) -> usize {
+        return sqr.top_left + self.level_sizes[sqr.level] - 1;
     }
 
     // Is the given space in the move bounds for this turn?
     fn in_bounds(&self, space: usize) -> bool {
        //println!("{}", space);
        space >= self.next_legal.top_left && 
-       space <= Board::bottom_right(self.next_legal)
-    }
-
-    // Applies f to every space in sqr
-    fn apply_to_spaces<F>(sqr: &Square, mut f: F) 
-        where F: FnMut(&Square) {
-        for i in sqr.top_left..=Board::bottom_right(*sqr) {
-            f(&Square {top_left: i, level: 0});
-        }
+       space <= self.bottom_right(self.next_legal)
     }
 
     // Mark any spaces marked NEITHER in sqr as DEAD
     fn mark_as_dead(&mut self, sqr: &Square) {
-        let f = |s: &Square| {
+        for i in sqr.top_left..=self.bottom_right(*sqr) {
+            let s = &Square {top_left: i, level: 0};
             if *self.occupied.get(s).unwrap() == Player::NEITHER {
                 self.occupied.insert(*s, Player::DEAD);
             }
-        };
-        Board::apply_to_spaces(sqr, f);
-        /*for i in sqr.top_left..self.bottom_right(*sqr) {
-            let s = &Square {top_left : i, level: 0};
-            if *self.occupied.get(s).unwrap() == Player::NEITHER {
-                self.occupied.insert(*s, Player::DEAD);
-            }
-        }*/
-        /*if sqr.level == 0 {
-            if *self.occupied.get(sqr).unwrap() == Player::NEITHER {
-                self.occupied.insert(*sqr, Player::DEAD);
-            }
-        } else {
-            for i in 0..9 {
-                self.mark_as_dead(&self.descend(sqr, i));
-            }
-        }*/
+        }
     }
 
     // Mark any spaces marked DEAD in sqr as NEITHER
     fn mark_as_neither(&mut self, sqr: &Square) {
-        if sqr.level == 0 {
-            if *self.occupied.get(sqr).unwrap() == Player::DEAD {
-                self.occupied.insert(*sqr, Player::NEITHER);
-            }
-        } else {
-            for i in 0..9 {
-                self.mark_as_neither(&self.descend(sqr, i));
+        for i in sqr.top_left..=self.bottom_right(*sqr) {
+            let s = &Square {top_left: i, level: 0};
+            if *self.occupied.get(s).unwrap() == Player::DEAD {
+                self.occupied.insert(*s, Player::NEITHER);
             }
         }
     }
@@ -205,13 +184,10 @@ impl Board {
     // Push all spaces that are marked NEITHER in sqr
     // to vec
     fn get_open_spaces(&self, sqr: Square, vec: &mut Vec<usize>) {
-        if sqr.level == 0 {
-            if *self.occupied.get(&sqr).unwrap() == Player::NEITHER {
-                vec.push(sqr.top_left);
-            }
-        } else {
-            for i in 0..9 {
-                self.get_open_spaces(self.descend(&sqr, i), vec);
+        for i in sqr.top_left..=self.bottom_right(sqr) {
+            let s = &Square {top_left: i, level: 0};
+            if *self.occupied.get(&s).unwrap() == Player::NEITHER {
+                vec.push(s.top_left);
             }
         }
     }
@@ -382,7 +358,7 @@ impl Board {
    // Descend((0, 2), 8) gives (72, 1)
    fn descend(&self, sqr: &Square, i: usize) -> Square {
         Square { top_left: sqr.top_left + 
-                      i * (3 as usize).pow(2 * (sqr.level - 1) as u32), 
+                      i * self.level_sizes[sqr.level - 1], 
                 level: sqr.level - 1}
    } 
 
@@ -393,9 +369,9 @@ impl Board {
    // 3 4 5
    // 6 7 8
    fn ascend(&self, sqr: &Square) -> (Square, usize) {
-       let f = sqr.top_left % (3 as usize).pow(2 * (sqr.level + 1) as u32);
-       let i = f / (3 as usize).pow((sqr.level*2) as u32);
-       let tl = sqr.top_left - i * (3 as usize).pow(2 * (sqr.level) as u32);
+       let f = sqr.top_left % self.level_sizes[sqr.level + 1];
+       let i = f / self.level_sizes[sqr.level];
+       let tl = sqr.top_left - i * self.level_sizes[sqr.level];
        (Square {top_left: tl, level: sqr.level + 1}, i)
    }
 
@@ -614,9 +590,6 @@ mod tests {
      }
 
      fn get_moves_at_depths_undo(b: &mut Board, depth: usize, out: &mut Vec<usize>) {
-         if depth == 0 {
-             return;
-         }
          let moves = b.get_moves();
          let out_len = out.len();
          out[out_len - depth] += moves.len();
@@ -630,7 +603,9 @@ mod tests {
                  println!("{:?}", b.get_moves());
                  assert!(false);
              }
-             get_moves_at_depths_undo(b, depth - 1, out);
+             if depth > 1 {
+                get_moves_at_depths_undo(b, depth - 1, out);
+             }
              assert!(b.undo_move());
              if depth == out_len  {
                 //println!("{}: {}", *m, out[out_len - 1] - temp);
@@ -675,7 +650,7 @@ mod tests {
              levels.push(0);
          }
          let now = Instant::now();
-         get_moves_at_depths_undo(&mut b, depth, &mut levels);
+         get_moves_at_depths(&mut b, depth, &mut levels);
          println!("Search took {} seconds", now.elapsed().as_secs());
          for i in 0..depth {
              print!("{}", i);
