@@ -98,6 +98,7 @@ impl Board {
         let mut result = Board {
                 to_move: Player::X, // X goes first
                 occupied: HashMap::new(),
+                spaces: Vec::new(),
                 // first move can be anywhere
                 next_legal: Square { top_left: 0, level: max_level_},
                 max_level: max_level_,
@@ -107,8 +108,7 @@ impl Board {
         // TODO: it might be cleaner to initialize all squares (including
         // higher level ones) with NEITHER
         for i in 0..(size_*size_) {
-            result.occupied.insert(Square {top_left: i, level: 0}, 
-                                   Player::NEITHER);
+            result.spaces.push(Player::NEITHER);
         }
         for i in 0..=result.max_level+1 {
             result.level_sizes.push((3 as usize).pow(2*i as u32));
@@ -133,20 +133,23 @@ impl Board {
         for y in [0, 3, 6, 27, 30, 33, 54, 57, 60].iter() {
             for x in [0, 1, 2, 9, 10, 11, 18, 19, 20].iter() {
                 let i = *y + *x;
-                match self.occupied.get(&Square {top_left: i, level: 0}) {
-                    Some(Player::X) => print!("X "),
-                    Some(Player::O) => print!("O "),
-                    Some(Player::NEITHER) => print!("- "),
-                    Some(Player::DEAD) => print!("+ "),
-                    // TODO: there must be a cleaner way to do this
-                    None => panic!("Invalid board state"),
+                match self.spaces[i] {
+                    Player::X => print!("X "),
+                    Player::O => print!("O "),
+                    Player::NEITHER => print!("- "),
+                    Player::DEAD => print!("+ "),
                 }
             }
             println!("");
         }
     }
 
-    //fn get(&self, sqr: Square)
+    fn get(&self, sqr: Square) -> Option<&Player> {
+        if sqr.level == 0 {
+            return Some(&self.spaces[sqr.top_left]);
+        }
+        return self.occupied.get(&sqr);
+    }
 
     // Return the integer corresponding to the bottom
     // right space of sqr
@@ -164,9 +167,8 @@ impl Board {
     // Mark any spaces marked NEITHER in sqr as DEAD
     fn mark_as_dead(&mut self, sqr: &Square) {
         for i in sqr.top_left..=self.bottom_right(*sqr) {
-            let s = &Square {top_left: i, level: 0};
-            if *self.occupied.get(s).unwrap() == Player::NEITHER {
-                self.occupied.insert(*s, Player::DEAD);
+            if self.spaces[i] == Player::NEITHER {
+                self.spaces[i] = Player::DEAD;
             }
         }
     }
@@ -174,9 +176,8 @@ impl Board {
     // Mark any spaces marked DEAD in sqr as NEITHER
     fn mark_as_neither(&mut self, sqr: &Square) {
         for i in sqr.top_left..=self.bottom_right(*sqr) {
-            let s = &Square {top_left: i, level: 0};
-            if *self.occupied.get(s).unwrap() == Player::DEAD {
-                self.occupied.insert(*s, Player::NEITHER);
+            if self.spaces[i] == Player::DEAD {
+                self.spaces[i] = Player::NEITHER;
             }
         }
     }
@@ -185,9 +186,8 @@ impl Board {
     // to vec
     fn get_open_spaces(&self, sqr: Square, vec: &mut Vec<usize>) {
         for i in sqr.top_left..=self.bottom_right(sqr) {
-            let s = &Square {top_left: i, level: 0};
-            if *self.occupied.get(&s).unwrap() == Player::NEITHER {
-                vec.push(s.top_left);
+            if self.spaces[i] == Player::NEITHER {
+                vec.push(i);
             }
         }
     }
@@ -242,7 +242,7 @@ impl Board {
     pub fn make_move(&mut self, space: usize) -> bool {
         let move_sqr = Square {top_left: space, level: 0};
         // Make sure this square is available
-        if *self.occupied.get(&move_sqr).unwrap() != Player::NEITHER {
+        if self.spaces[space] != Player::NEITHER {
             return false;
         }
         // Check if the move is in the legal bounds
@@ -250,7 +250,7 @@ impl Board {
             return false;
         }
         // Write this move to the board
-        self.occupied.insert(move_sqr, self.to_move);
+        self.spaces[space] = self.to_move;
         // Put the move into the move history
         self.move_history.push(space);
         
@@ -294,7 +294,7 @@ impl Board {
         };
         let move_sqr = Square {top_left: space, level: 0};
         // Remove this move from the board
-        self.occupied.insert(move_sqr, Player::NEITHER);
+        self.spaces[space] = Player::NEITHER;
         
         // Update occupied
         let (mut _check_sqr, _) = self.ascend(&move_sqr);
@@ -389,7 +389,7 @@ impl Board {
         this_board.resize_with(9, || {
             let move_sqr = self.descend(sqr, counter);
             counter += 1;
-            match self.occupied.get(&(move_sqr)) {
+            match self.get(move_sqr) {
                 Some(p) => *p,
                 None => Player::NEITHER
             }
