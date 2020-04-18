@@ -1,6 +1,7 @@
 use std::collections::HashMap;
 use std::thread;
 use std::time::Instant;
+use std::hash::{Hash, Hasher};
 
 #[derive(PartialEq)]
 #[derive(Clone, Copy)]
@@ -39,6 +40,7 @@ pub struct Square {
     // level 2 is a 9x9 board, etc
     pub level: usize,
 }
+
 // Each tile of the tic tac toe board is assigned an integer
 // max_level = 1:
 // 0 1 2
@@ -85,6 +87,18 @@ pub struct Board {
     // The size in spaces of a square at level index <= max_level
     level_sizes: Vec<usize>,
 }
+// Win table for all 3x3 boards
+// (Geng, 2020)
+static WIN_TABLE: [u64; 8] = [
+    0xff80808080808080,
+    0xfff0aa80faf0aa80,
+    0xffcc8080cccc8080,
+    0xfffcaa80fefcaa80,
+    0xfffaf0f0aaaa8080,
+    0xfffafaf0fafaaa80,
+    0xfffef0f0eeee8080,
+    0xffffffffffffffff,
+];
 
 impl Board {
     // Creates a new board with max level max_level_
@@ -110,7 +124,11 @@ impl Board {
         for i in 0..(size_*size_) {
             result.spaces.push(Player::NEITHER);
         }
-        for i in 0..=result.max_level+1 {
+        for i in 0..9 {
+            result.spaces.push(Player::NEITHER);
+        }
+        result.spaces.push(Player::NEITHER);
+        for i in 0..=result.max_level+2 {
             result.level_sizes.push((3 as usize).pow(2*i as u32));
         }
         return result;
@@ -144,11 +162,27 @@ impl Board {
         }
     }
 
-    fn get(&self, sqr: Square) -> Option<&Player> {
+    fn get(&self, sqr: Square) -> Player {
         if sqr.level == 0 {
-            return Some(&self.spaces[sqr.top_left]);
+            return self.spaces[sqr.top_left];
         }
-        return self.occupied.get(&sqr);
+        if sqr.level == 1 {
+            return self.spaces[81 + sqr.top_left / 9];
+        }
+        if sqr.level == 2 {
+            return self.spaces[90];
+        }
+        panic!("Call to get with sqr > max_level");
+    }
+
+    fn set(&mut self, sqr: Square, player: Player) {
+        if sqr.level == 0 {
+            self.spaces[sqr.top_left] = player;
+        } else if sqr.level == 1 {
+            self.spaces[81 + sqr.top_left / 9] = player;
+        } else if sqr.level == 2 {
+            self.spaces[90] = player;
+        }
     }
 
     // Return the integer corresponding to the bottom
@@ -221,7 +255,10 @@ impl Board {
         // We know that this will not result in a next_legal
         // larger than the entire board, because we have already
         // determined that the board is not drawn or won
-        while self.occupied.contains_key(&self.next_legal) {
+        while self.get(self.next_legal) != Player::NEITHER  {
+            if self.next_legal.level >= 2 {
+                println!("Wrong: {}", self.next_legal.level);
+            }
             let (temp, _) = self.ascend(&self.next_legal);
             self.next_legal = temp;
         }
@@ -262,7 +299,8 @@ impl Board {
             let victorious_player = self.check_victory(&check_sqr);
             if victorious_player != Player::NEITHER {
                 // This player or DEAD now occupies this square
-                self.occupied.insert(*check_sqr, victorious_player);
+                //self.occupied.insert(*check_sqr, victorious_player);
+                self.set(*check_sqr, victorious_player);
                 self.mark_as_dead(check_sqr);
                 // If this is the top level, the capturing player
                 // wins the game, or the game is drawn (winner = DEAD)
@@ -277,8 +315,9 @@ impl Board {
             let (_check_sqr, _) = self.ascend(check_sqr);
             *check_sqr = _check_sqr;
         }
-
-        self.update_move_bounds(&move_sqr);
+        if self.winner == Player::NEITHER {
+            self.update_move_bounds(&move_sqr);
+        }
         self.next_player();
         return true;
     }
@@ -302,12 +341,12 @@ impl Board {
         // Check every level to see if removing the move changed the
         // status of any of them
         while check_sqr.level <= self.max_level {
-            if self.occupied.contains_key(check_sqr) {
+            if self.get(*check_sqr) != Player::NEITHER {
                 self.mark_as_neither(check_sqr);
                 let victorious_player = self.check_victory(&check_sqr);
                 if victorious_player == Player::NEITHER {
                     // Neither player occupies this square anymore
-                    self.occupied.remove(check_sqr);
+                    self.set(*check_sqr, Player::NEITHER);
 
                     if check_sqr.level == self.max_level {
                         // The game was over, but now it is not
@@ -381,7 +420,50 @@ impl Board {
     // Returns the winner if so, returns NEITHER if no player has won
     // and returns DEAD if the square is drawn (i.e all of its
     // subsquares are occupied)
+    // TODO: only check for the last player that moved
     pub fn check_victory(&self, sqr: &Square) -> Player {
+        let mut block_x = 0;
+        for i in 0..9 {
+            block_x |= match self.get(self.descend(sqr, i)) {
+                Player::X => 1,
+                _ => 0,
+            } << i;
+        }
+        if WIN_TABLE[block_x as usize / 64] & (1 << (block_x % 64)) != 0 {
+            return Player::X;
+        }
+        let mut block_o = 0;
+        for i in 0..9 {
+            block_o |= match self.get(self.descend(sqr, i)) {
+                Player::O => 1,
+                _ => 0,
+            } << i;
+        }
+        if WIN_TABLE[block_o as usize / 64] & (1 << (block_o % 64)) != 0 {
+            return Player::O;
+        }
+        // Check for draw
+        let mut draw = true;
+        for i in 0..9 {
+            match self.get(self.descend(sqr, i)) {
+                Player::NEITHER => {draw = false; break; },
+                _ => continue, 
+            }
+        }
+
+        if draw {
+            return Player::DEAD;
+        }
+        return Player::NEITHER;
+    }
+
+    // Determine if the square with space at its top left corner at level
+    // where 0 is the lowest level (i.e. individual squares) has been 
+    // won by a player
+    // Returns the winner if so, returns NEITHER if no player has won
+    // and returns DEAD if the square is drawn (i.e all of its
+    // subsquares are occupied)
+    pub fn check_victory_old(&self, sqr: &Square) -> Player {
         let mut this_board: Vec<Player> = Vec::with_capacity(9); 
         // Put the owners of the 9 subsquares
         // composing sqr into this_board
@@ -389,10 +471,7 @@ impl Board {
         this_board.resize_with(9, || {
             let move_sqr = self.descend(sqr, counter);
             counter += 1;
-            match self.get(move_sqr) {
-                Some(p) => *p,
-                None => Player::NEITHER
-            }
+            self.get(move_sqr)
         });
         
         // Check the horizontals
