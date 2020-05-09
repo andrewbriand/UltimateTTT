@@ -101,6 +101,9 @@ static WIN_TABLE: [u64; 8] = [
 ];
 
 impl Board {
+    pub fn get_to_move(&self) -> Player {
+        return self.to_move;
+    }
     // Creates a new board with max level max_level_
     // where 1 is a standard 3x3 tic-tac-toe board,
     // 2 is a 9x9 board, etc.
@@ -668,6 +671,20 @@ mod tests {
          }
      }
 
+     fn get_moves_at_depths_no_vector(b: &mut Board, depth: usize) -> usize {
+         if depth == 0 {
+             return 1;
+         }
+         let moves = b.get_moves();
+         let mut sum = 0;
+         for m in moves {
+             let mut next_b = b.clone();
+             assert!(next_b.make_move(m));
+             sum += get_moves_at_depths_no_vector(&mut next_b, depth - 1);
+         }
+         return sum;
+     }
+
      fn get_moves_at_depths_undo(b: &mut Board, depth: usize, out: &mut Vec<usize>) {
          let moves = b.get_moves();
          let out_len = out.len();
@@ -728,7 +745,11 @@ mod tests {
          for _i in 0..depth {
              levels.push(0);
          }
-         let now = Instant::now();
+         let mut now = Instant::now();
+         let moves = vec![0, 3, 27, 4, 36, 5, 46, 13, 37, 12, 28, 14];
+        for m in moves {
+            //b.make_move(m);
+        }
          get_moves_at_depths(&mut b, depth, &mut levels);
          println!("Search took {} seconds", now.elapsed().as_secs());
          for i in 0..depth {
@@ -736,5 +757,10 @@ mod tests {
              print!("\t");
              println!("{}", levels[i]);
          }
+         b = Board::new(2);
+         now = Instant::now();
+         let lowest_depth_moves = get_moves_at_depths_no_vector(&mut b, depth);
+         println!("Search took {} seconds", now.elapsed().as_secs());
+         println!("Level {}: {}", depth - 1, lowest_depth_moves);
      }
 }

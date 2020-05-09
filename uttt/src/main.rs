@@ -1,8 +1,13 @@
 use structopt::StructOpt;
 mod board;
+mod ai;
+use ai::AI;
 pub use board::Board;
+mod humanplayer;
+pub use humanplayer::HumanPlayer;
 use board::Player;
 use text_io::read;
+use std::time::Instant;
 
 #[derive(StructOpt)]
 struct Cli {
@@ -13,30 +18,41 @@ struct Cli {
 }
 
 fn main() {
-    let args = Cli::from_args(); 
-    println!("{:?}", args.o_ai_path);
-    let mut b = Board::new(2);
-    b.pretty_print();
-    println!("{:?}", args.x_ai_path);
-    let mut v = Vec::new();
+    let level = 2;
+    let mut board = Board::new(level);
+    let mut x_ai = HumanPlayer::new(level);
+    let mut o_ai = HumanPlayer::new(level);
+    let mut last_move = x_ai.get_move(-1);
     loop {
-        let i: usize = read!();
-        if i == 900 {
+        if (last_move == -1) {
+            println!("X forfeited");
+            board.winner = Player::O;
             break;
         }
-        if i == 901 {
-            println!("{}", b.undo_move());
-        } else {
-            println!("{}", b.make_move(i));
-            v.push(i);
-        }
-        //println!("{:?}", b);
-        b.pretty_print();
-        if b.winner != Player::NEITHER {
+        if (!board.make_move(last_move as usize)) {
+            println!("X made an illegal move");
+            board.winner = Player::O;
             break;
         }
-        println!("{:?}", b.next_legal);
+        if (board.winner != Player::NEITHER) {
+            break;
+        }
+        last_move = o_ai.get_move(last_move);
+        if (last_move == -1) {
+            println!("O forfeited");
+            board.winner = Player::X;
+            break;
+        }
+        if (!board.make_move(last_move as usize)) {
+            println!("O made an illegal move");
+            board.winner = Player::X;
+            break;
+        }
+        if (board.winner != Player::NEITHER) {
+            break;
+        }
+        last_move = x_ai.get_move(last_move);
     }
-    println!("{:?} wins", b.winner);
-    println!("{:?}", v);
+    println!("{:?} wins", board.winner);
+    //println!("{:?}", v);
 }
