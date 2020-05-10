@@ -8,7 +8,7 @@ pub struct HumanPlayer {
 
 impl AI for HumanPlayer {
     fn get_move(&mut self, last_move : i64) -> i64 {
-        if (last_move != -1) {
+        if last_move != -1 {
             self.board.make_move(last_move as usize);
         }
         self.board.pretty_print();
@@ -19,7 +19,7 @@ impl AI for HumanPlayer {
             if i == 900 {
                 return -1;
             } else {
-                if (self.board.make_move(i as usize)) {
+                if self.board.make_move(i as usize) {
                     return i as i64;
                 } else {
                     println!("{} is an illegal move", i);
@@ -27,6 +27,8 @@ impl AI for HumanPlayer {
             }
         }
     }
+
+    fn cleanup(&mut self) {}
 }
 
 impl HumanPlayer {

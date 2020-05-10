@@ -9,24 +9,29 @@ pub struct PipeAI {
 
 impl AI for PipeAI {
     fn get_move(&mut self, last_move: i64) -> i64 {
-        let to_send = last_move.to_string();
+        let to_send = last_move.to_string() + "\r\n";
         match self.process.stdin.as_mut().unwrap().write(to_send.as_bytes()) {
-            Err(why) => panic!("couldn't write to AI: {}"),
+            Err(why) => panic!("couldn't write to AI: {}", why),
             Ok(_) => (),
         }
-        self.process.stdin.as_mut().unwrap().flush();
-        println!("sent {} successfully", to_send);
-        let mut res_vec : Vec<u8> = Vec::with_capacity(100);
+        self.process.stdin.as_mut().unwrap().flush().unwrap();
+        //println!("sent {} successfully", to_send);
+        let mut res_vec : Vec<u8> = vec![32; 100];
         match self.process.stdout.as_mut().unwrap().read(&mut res_vec[..]) {
-            Err(why) => panic!("couldn't read from AI:"),
+            Err(_) => panic!("couldn't read from AI:"),
             Ok(_) => (),
-        }
-        let response = String::from_utf8(res_vec).unwrap();
-        println!("received {} successfully", response);
+        };
+        let untrimmed_response = String::from_utf8(res_vec).unwrap();
+        let response = untrimmed_response.trim();
+        //println!("received {} successfully", response);
         return match response.parse::<i64>() {
-            Err(E) => -1,
-            Ok(T) => T,
+            Err(_) => -1,
+            Ok(t) => t,
         }
+    }
+
+    fn cleanup(&mut self) {
+        self.process.kill();
     }
 }
 

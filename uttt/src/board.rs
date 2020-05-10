@@ -1,7 +1,7 @@
 use std::collections::HashMap;
-use std::thread;
-use std::time::Instant;
-use std::hash::{Hash, Hasher};
+//use std::thread;
+//use std::time::Instant;
+use std::hash::{Hash};
 
 #[derive(PartialEq)]
 #[derive(Clone, Copy)]
@@ -83,7 +83,7 @@ pub struct Board {
     // The moves that have been made up until this point
     // where move_history[move_history.len() - 1] is the last
     // move made
-    move_history: Vec<usize>,
+    pub move_history: Vec<usize>,
     // The size in spaces of a square at level index <= max_level
     level_sizes: Vec<usize>,
 }
@@ -124,10 +124,10 @@ impl Board {
                 level_sizes: Vec::new() };
         // TODO: it might be cleaner to initialize all squares (including
         // higher level ones) with NEITHER
-        for i in 0..(size_*size_) {
+        for _i in 0..(size_*size_) {
             result.spaces.push(Player::NEITHER);
         }
-        for i in 0..9 {
+        for _i in 0..9 {
             result.spaces.push(Player::NEITHER);
         }
         result.spaces.push(Player::NEITHER);
