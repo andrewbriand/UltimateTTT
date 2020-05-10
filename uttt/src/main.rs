@@ -4,6 +4,8 @@ mod ai;
 use ai::AI;
 pub use board::Board;
 mod humanplayer;
+mod pipeai;
+pub use pipeai::PipeAI;
 pub use humanplayer::HumanPlayer;
 use board::Player;
 use text_io::read;
@@ -21,7 +23,7 @@ fn main() {
     let level = 2;
     let mut board = Board::new(level);
     let mut x_ai = HumanPlayer::new(level);
-    let mut o_ai = HumanPlayer::new(level);
+    let mut o_ai = PipeAI::new("ls".to_string());
     let mut last_move = x_ai.get_move(-1);
     loop {
         if (last_move == -1) {
@@ -53,6 +55,7 @@ fn main() {
         }
         last_move = x_ai.get_move(last_move);
     }
+    board.pretty_print();
     println!("{:?} wins", board.winner);
     //println!("{:?}", v);
 }
