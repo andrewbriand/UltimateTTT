@@ -36,11 +36,12 @@ impl AI for PipeAI {
 }
 
 impl PipeAI {
-    pub fn new(cmd: String) -> PipeAI {
+    pub fn new(cmd: String, args: Vec<String>) -> PipeAI {
         PipeAI {
             process: match Command::new(cmd.clone())
                             .stdin(Stdio::piped())
                             .stdout(Stdio::piped())
+                            .args(&args[..])
                             .spawn() {
                 Err(why) => panic!("couldn't spawn {}: {:?}", cmd, why),
                 Ok(process) => process,
