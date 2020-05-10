@@ -18,9 +18,9 @@ impl AI for SimpleSearchAI {
         let mut result_move : i64 = -1;
         let moves = self.board.get_moves();
         for m in moves {
-            let mut new_board = self.board.clone();
-            new_board.make_move(m);
-            let score = -self.search(&new_board, self.depth - 1, -beta, -alpha);
+            self.board.make_move(m);
+            let score = -self.search(self.depth - 1, -beta, -alpha);
+            self.board.undo_move();
             if score > alpha {
                 alpha = score;
                 result_move = m as i64;
@@ -50,24 +50,24 @@ impl SimpleSearchAI {
         }
     }
 
-    pub fn search(&self, board: &Board, depth: usize, 
+    pub fn search(&mut self, depth: usize, 
                   _alpha: i32, beta: i32) -> i32 {
         let mut alpha = _alpha;
         if depth == 0 {
-            return (self.eval)(board);
+            return (self.eval)(&self.board);
         }
-        let moves = board.get_moves();
+        let moves = self.board.get_moves();
         if moves.len() == 0 {
             if depth % 2 == 0 {
-                return (self.eval)(board);
+                return (self.eval)(&self.board);
             } else {
-                return -(self.eval)(board);
+                return -(self.eval)(&self.board);
             }
         }
         for m in moves {
-            let mut new_board = board.clone();
-            new_board.make_move(m);
-            let score = -self.search(&new_board, depth - 1, -beta, -alpha);
+            self.board.make_move(m);
+            let score = -self.search(depth - 1, -beta, -alpha);
+            self.board.undo_move();
             if score > alpha {
                 alpha = score;
             }
