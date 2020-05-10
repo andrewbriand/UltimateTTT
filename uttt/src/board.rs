@@ -165,7 +165,7 @@ impl Board {
         }
     }
 
-    fn get(&self, sqr: Square) -> Player {
+    pub fn get(&self, sqr: Square) -> Player {
         if sqr.level == 0 {
             return self.spaces[sqr.top_left];
         }
