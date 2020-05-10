@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 //use std::thread;
-//use std::time::Instant;
+use std::time::Instant;
 use std::hash::{Hash};
 
 #[derive(PartialEq)]
@@ -115,12 +115,12 @@ impl Board {
         let mut result = Board {
                 to_move: Player::X, // X goes first
                 occupied: HashMap::new(),
-                spaces: Vec::new(),
+                spaces: Vec::with_capacity(81),
                 // first move can be anywhere
                 next_legal: Square { top_left: 0, level: max_level_},
                 max_level: max_level_,
                 winner: Player::NEITHER,
-                move_history: Vec::new(),
+                move_history: Vec::with_capacity(81),
                 level_sizes: Vec::new() };
         // TODO: it might be cleaner to initialize all squares (including
         // higher level ones) with NEITHER
@@ -152,11 +152,11 @@ impl Board {
         // TODO: generalize this to n-levels
         // print rows in order
         for y in [0 as i64, 3, 6, -1, 27, 30, 33, -1, 54, 57, 60].iter() {
-            if (*y == -1) {
+            if *y == -1 {
                 println!("----------------------");
             } else {
                 for x in [0 as i64, 1, 2, -1, 9, 10, 11, -1, 18, 19, 20].iter() {
-                    if (*x == -1) {
+                    if *x == -1 {
                         print!("| ");
                     } else {
                         let i = *y + *x;
@@ -199,6 +199,11 @@ impl Board {
     // Return the integer corresponding to the bottom
     // right space of sqr
     fn bottom_right(&self, sqr: Square) -> usize {
+        if sqr.level == 1 {
+            return sqr.top_left + 8;
+        } else if sqr.level == 2 {
+            return 80;
+        }
         return sqr.top_left + self.level_sizes[sqr.level] - 1;
     }
 
@@ -239,8 +244,13 @@ impl Board {
 
     // Returns a vector of the current legal moves
     pub fn get_moves(&self) -> Vec<usize> {
-        let mut vec = Vec::new();
-        self.get_open_spaces(self.next_legal, &mut vec);
+        let mut vec = Vec::with_capacity(81);
+        for i in self.next_legal.top_left..=self.bottom_right(self.next_legal) {
+            if self.spaces[i] == Player::NEITHER {
+                vec.push(i);
+            }
+        }
+        //self.get_open_spaces(self.next_legal, &mut vec);
         return vec;
     }
 
@@ -407,6 +417,11 @@ impl Board {
    // Descend((54, 1), 2) gives (56, 0)
    // Descend((0, 2), 8) gives (72, 1)
    fn descend(&self, sqr: &Square, i: usize) -> Square {
+        if sqr.level == 1 {
+            return Square {top_left: sqr.top_left + i, level: 0};
+        } else if sqr.level == 2 {
+            return Square {top_left: i * 9, level: 1};
+        }
         Square { top_left: sqr.top_left + 
                       i * self.level_sizes[sqr.level - 1], 
                 level: sqr.level - 1}
@@ -419,6 +434,12 @@ impl Board {
    // 3 4 5
    // 6 7 8
    fn ascend(&self, sqr: &Square) -> (Square, usize) {
+       if sqr.level == 0 {
+           let i = sqr.top_left % 9;
+           return (Square {top_left: sqr.top_left - i, level: 1}, i);
+       } else if sqr.level == 1 {
+           return (Square {top_left: 0, level: 2}, sqr.top_left / 9);
+       }
        let f = sqr.top_left % self.level_sizes[sqr.level + 1];
        let i = f / self.level_sizes[sqr.level];
        let tl = sqr.top_left - i * self.level_sizes[sqr.level];
