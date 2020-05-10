@@ -310,7 +310,7 @@ impl Board {
         // Write this move to the board
         self.spaces[space] = self.to_move;
         // Put the move into the move history
-        self.move_history.push(space);
+        //self.move_history.push(space);
         
         // Update occupied
         let (mut _check_sqr, _) = self.ascend(&move_sqr);
@@ -355,6 +355,9 @@ impl Board {
         let move_sqr = Square {top_left: space, level: 0};
         // Remove this move from the board
         self.spaces[space] = Player::NEITHER;
+
+        // Move to the last (same as next) player
+        self.next_player();
         
         // Update occupied
         let (mut _check_sqr, _) = self.ascend(&move_sqr);
@@ -392,8 +395,6 @@ impl Board {
                         level: 0};
             self.update_move_bounds(&preceding_move);
         }
-        // Move to the last (same as next) player
-        self.next_player();
         return true;
     }
 
@@ -456,23 +457,12 @@ impl Board {
     pub fn check_victory(&self, sqr: &Square) -> Player {
         let mut block_x = 0;
         for i in 0..9 {
-            block_x |= match self.get(self.descend(sqr, i)) {
-                Player::X => 1,
-                _ => 0,
-            } << i;
+            if self.get(self.descend(sqr, i)) == self.to_move {
+                block_x |= 1 << i;
+            }
         }
         if WIN_TABLE[block_x as usize / 64] & (1 << (block_x % 64)) != 0 {
-            return Player::X;
-        }
-        let mut block_o = 0;
-        for i in 0..9 {
-            block_o |= match self.get(self.descend(sqr, i)) {
-                Player::O => 1,
-                _ => 0,
-            } << i;
-        }
-        if WIN_TABLE[block_o as usize / 64] & (1 << (block_o % 64)) != 0 {
-            return Player::O;
+            return self.to_move;
         }
         // Check for draw
         let mut draw = true;
@@ -768,7 +758,7 @@ mod tests {
      #[ignore]
      fn test_move_gen_2lv() {
          let mut b = Board::new(2);
-         let depth = 7; // actually depth + 1
+         let depth = 8; // actually depth + 1
          println!("Level\tMoves");
          let mut levels = Vec::new();
          for _i in 0..depth {
