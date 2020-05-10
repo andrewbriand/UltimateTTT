@@ -14,11 +14,15 @@ impl AI for PipeAI {
             Err(why) => panic!("couldn't write to AI: {}"),
             Ok(_) => (),
         }
-        let mut response = String::new();
-        match self.process.stdout.as_mut().unwrap().read_to_string(&mut response) {
+        self.process.stdin.as_mut().unwrap().flush();
+        println!("sent {} successfully", to_send);
+        let mut res_vec : Vec<u8> = Vec::with_capacity(100);
+        match self.process.stdout.as_mut().unwrap().read(&mut res_vec[..]) {
             Err(why) => panic!("couldn't read from AI:"),
             Ok(_) => (),
         }
+        let response = String::from_utf8(res_vec).unwrap();
+        println!("received {} successfully", response);
         return match response.parse::<i64>() {
             Err(E) => -1,
             Ok(T) => T,
@@ -33,7 +37,7 @@ impl PipeAI {
                             .stdin(Stdio::piped())
                             .stdout(Stdio::piped())
                             .spawn() {
-                Err(why) => panic!("couldn't spawn {}", cmd),
+                Err(why) => panic!("couldn't spawn {}: {:?}", cmd, why),
                 Ok(process) => process,
             },
         }
