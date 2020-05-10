@@ -25,11 +25,11 @@ struct Cli {
 fn main() {
     let level = 2;
     let mut board = Board::new(level);
-    //let mut o_ai = HumanPlayer::new(level);
-    //let mut x_ai = PipeAI::new("C:/ultimate-tictactoe/target/release/main.exe".to_string(),
-                     //          vec!["10".to_string()]);
-    //let mut o_ai = PipeAI::new("C:/ultimate-tictactoe/target/release/main.exe".to_string(),
-     //                          vec!["12".to_string()]);
+    //let mut x_ai = HumanPlayer::new(level);
+   let mut x_ai = PipeAI::new("C:/ultimate-tictactoe/target/release/main.exe".to_string(),
+                               vec!["10".to_string()]);
+    let mut o_ai = PipeAI::new("C:/ultimate-tictactoe/target/release/main.exe".to_string(),
+                               vec!["10".to_string()]);
     /*let mut x_ai = SimpleSearchAI::new(
          |board: &Board| -> i32 {
               if board.winner == Player::O {
@@ -50,7 +50,7 @@ fn main() {
               return 0;
          }
         , 7);*/
-    let mut o_ai = SimpleSearchAI::new(
+    /*let mut o_ai = SimpleSearchAI::new(
          |board: &Board| -> i32 {
               if board.winner == Player::O {
                  return 50000;
@@ -82,8 +82,8 @@ fn main() {
               }
               return result;
          }
-        , 10);
-    let mut x_ai = SimpleSearchAI::new(
+        , 12);*/
+    /*let mut x_ai = SimpleSearchAI::new(
          |board: &Board| -> i32 {
               if board.winner == Player::O {
                  return -50000;
@@ -115,7 +115,7 @@ fn main() {
               }
               return result;
          }
-        , 10);
+        , 10);*/
     let mut last_move = x_ai.get_move(-1);
     loop {
         if last_move == -1 {
@@ -124,10 +124,12 @@ fn main() {
             break;
         }
         if !board.make_move(last_move as usize) {
-            println!("X made an illegal move");
+            println!("X made an illegal move {}", last_move);
             board.winner = Player::O;
             break;
         }
+        board.pretty_print();
+        println!("");
         if board.winner != Player::NEITHER {
             break;
         }
@@ -138,10 +140,12 @@ fn main() {
             break;
         }
         if !board.make_move(last_move as usize) {
-            println!("O made an illegal move");
+            println!("O made an illegal move {}", last_move);
             board.winner = Player::X;
             break;
         }
+        board.pretty_print();
+        println!("");
         if board.winner != Player::NEITHER {
             break;
         }
