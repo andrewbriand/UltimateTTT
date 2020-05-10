@@ -151,17 +151,25 @@ impl Board {
     pub fn pretty_print(&self) {
         // TODO: generalize this to n-levels
         // print rows in order
-        for y in [0, 3, 6, 27, 30, 33, 54, 57, 60].iter() {
-            for x in [0, 1, 2, 9, 10, 11, 18, 19, 20].iter() {
-                let i = *y + *x;
-                match self.spaces[i] {
-                    Player::X => print!("X "),
-                    Player::O => print!("O "),
-                    Player::NEITHER => print!("- "),
-                    Player::DEAD => print!("+ "),
+        for y in [0 as i64, 3, 6, -1, 27, 30, 33, -1, 54, 57, 60].iter() {
+            if (*y == -1) {
+                println!("----------------------");
+            } else {
+                for x in [0 as i64, 1, 2, -1, 9, 10, 11, -1, 18, 19, 20].iter() {
+                    if (*x == -1) {
+                        print!("| ");
+                    } else {
+                        let i = *y + *x;
+                        match self.spaces[i as usize] {
+                            Player::X => print!("X "),
+                            Player::O => print!("O "),
+                            Player::NEITHER => print!("- "),
+                            Player::DEAD => print!("+ "),
+                        }
+                    }
                 }
+                println!("");
             }
-            println!("");
         }
     }
 

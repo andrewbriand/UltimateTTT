@@ -25,7 +25,7 @@ struct Cli {
 fn main() {
     let level = 2;
     let mut board = Board::new(level);
-    let mut x_ai = HumanPlayer::new(level);
+    let mut o_ai = HumanPlayer::new(level);
     //let mut x_ai = PipeAI::new("C:/ultimate-tictactoe/target/debug/main.exe".to_string(),
      //                          vec!["8".to_string()]);
     //let mut o_ai = PipeAI::new("C:/ultimate-tictactoe/target/debug/main.exe".to_string(),
@@ -50,7 +50,7 @@ fn main() {
               return 0;
          }
         , 7);*/
-    let mut o_ai = SimpleSearchAI::new(
+    /*let mut o_ai = SimpleSearchAI::new(
          |board: &Board| -> i32 {
               if board.winner == Player::O {
                  return 50000;
@@ -71,6 +71,39 @@ fn main() {
                                         level: 0}) {
                         Player::O => result += 50,
                         Player::X => result -= 50,
+                        _ => ()
+                   }
+              }
+              return result;
+         }
+        , 10);*/
+    let mut x_ai = SimpleSearchAI::new(
+         |board: &Board| -> i32 {
+              if board.winner == Player::O {
+                 return -50000;
+              } else if board.winner == Player::X {
+                 return 50000;
+              }
+              let mut result = 0;
+              for i in [0, 9, 18, 27, 36, 45, 54, 63, 72].iter() {
+                  match board.get(Square { top_left: *i,
+                                        level: 1}) {
+                        Player::O => result -= 500,
+                        Player::X => result += 500,
+                        _ => ()
+                   }
+              }
+                  match board.get(Square { top_left: 36,
+                                        level: 1}) {
+                        Player::O => result -= 1000,
+                        Player::X => result += 1000,
+                        _ => ()
+                   }
+              for i in [4, 13, 22, 31, 40, 49, 58, 67, 76].iter() {
+                  match board.get(Square { top_left: *i,
+                                        level: 0}) {
+                        Player::O => result -= 50,
+                        Player::X => result += 50,
                         _ => ()
                    }
               }
