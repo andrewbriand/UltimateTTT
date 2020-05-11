@@ -42,7 +42,11 @@ impl MonteCarloAI {
     }
 
     pub fn from_save(filename: String) -> MonteCarloAI {
-        bincode::deserialize_from(File::create(filename).unwrap()).unwrap()
+        let result: MonteCarloAI = bincode::deserialize_from(File::open(filename).unwrap()).unwrap();
+        for p in &result.tree[0].children {
+           println!("{}: {}/{}", *p.0, result.tree[*p.1].numerator, result.tree[*p.1].denominator) 
+        }
+        return result;
     }
 
     pub fn train(&mut self, games: usize) {
