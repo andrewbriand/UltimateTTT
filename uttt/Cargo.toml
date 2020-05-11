@@ -9,3 +9,13 @@ edition = "2018"
 [dependencies]
 structopt = "0.2.10"
 text_io = "0.1.8"
+serde = { version = "1.0.110", features = ["derive"] }
+bincode = "1.2.1"
+rand = "0.7.3"
+
+[profile.release]
+debug = true
+
+[[bin]]
+name = "montecarlo-train"
+path = "src/montecarlo-train.rs"

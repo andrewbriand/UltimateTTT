@@ -2,10 +2,12 @@ use std::collections::HashMap;
 //use std::thread;
 use std::time::Instant;
 use std::hash::{Hash};
+use serde::{Serialize, Deserialize};
 
 #[derive(PartialEq)]
 #[derive(Clone, Copy)]
 #[derive(Debug)]
+#[derive(Serialize, Deserialize)]
 pub enum Player {
     X,
     O,
@@ -31,6 +33,7 @@ pub enum Player {
 #[derive(Debug)]
 #[derive(Hash)]
 #[derive(Eq)]
+#[derive(Serialize, Deserialize)]
 pub struct Square {
     // the integer corresponding to the 
     // space in the top left corner of this square
@@ -62,6 +65,7 @@ pub struct Square {
 // top left corner at 00 and its bottom right corner at 08
 #[derive(Debug)]
 #[derive(Clone)]
+#[derive(Serialize, Deserialize)]
 pub struct Board {
     // the index of the top level in the board e.g.
     // max_level = 1 is a standard 3x3 tic-tac-toe board
