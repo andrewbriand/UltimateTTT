@@ -25,20 +25,20 @@ struct TreeNode {
 
 #[derive(Serialize, Deserialize)]
 pub struct MonteCarloAI {
-   start: TreeNode,
    tree: Vec<TreeNode>,
 }
 
 impl MonteCarloAI {
     pub fn new() -> MonteCarloAI {
-        MonteCarloAI {
-            start: TreeNode {
+        let mut result = MonteCarloAI {
+            tree: Vec::new(),
+        };
+        result.tree.push(TreeNode {
                 numerator: 0,
                 denominator: 0,
                 children: HashMap::new(),
-            },
-            tree: Vec::new(),
-        }
+            });
+        return result;
     }
 
     pub fn from_save(filename: String) -> MonteCarloAI {
@@ -46,11 +46,13 @@ impl MonteCarloAI {
     }
 
     pub fn train(&mut self, games: usize) {
-        let mut board = Board::new(2);
-        self.train_helper(&board, &mut self.start);
+        for _i in 0..games {
+            let board = Board::new(2);
+            self.train_helper(&board, 0);
+        }
     }
 
-    fn train_helper(&mut self, board: &Board, node: &mut TreeNode) -> i64 {
+    fn train_helper(&mut self, board: &Board, node_index: usize) -> i64 {
         if board.winner == Player::O {
             return -1;
         } else if board.winner == Player::X {
@@ -62,7 +64,8 @@ impl MonteCarloAI {
         let mut new_board = board.clone();
         let next_move = moves[rand::random::<usize>() % moves.len()];
         new_board.make_move(next_move);
-        if node.children.len() == 0 {
+        //let node = &mut self.tree[node_index];
+        if self.tree[node_index].children.len() == 0 {
             for m in moves {
                 self.tree.push(
                     TreeNode {
@@ -71,17 +74,18 @@ impl MonteCarloAI {
                         children: HashMap::new(),
                     }
                 );
-                node.children.insert(m, self.tree.len());
+                let idx = self.tree.len() - 1;
+                self.tree[node_index].children.insert(m, idx);
             }
         }
-        let move_node : &mut TreeNode = &mut self.tree[*node.children.get(&next_move).unwrap()];
-        let result = self.train_helper(&new_board, move_node);
+        let move_node_index = *self.tree[node_index].children.get(&next_move).unwrap();
+        let result = self.train_helper(&new_board, move_node_index);
         if result == 1 && board.get_to_move() == Player::X {
-            move_node.numerator += 1;
+            self.tree[move_node_index].numerator += 1;
         } else if result == -1 && board.get_to_move() == Player::O {
-            move_node.numerator += 1;
+            self.tree[move_node_index].numerator += 1;
         }
-        move_node.denominator += 1;
+        self.tree[move_node_index].denominator += 1;
         return result;
     }
 
