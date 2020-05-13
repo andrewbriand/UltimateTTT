@@ -32,7 +32,7 @@ impl AI for MonteCarloAI {
         if last_move != -1 {
           self.board.make_move(last_move as usize);
         }
-        let result = self.search(6000000) as i64;
+        let result = self.search(100000) as i64;
         self.board.make_move(result as usize);
         return result;
     }
