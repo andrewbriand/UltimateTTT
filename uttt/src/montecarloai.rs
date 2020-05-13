@@ -1,4 +1,3 @@
-use std::fs::File;
 use std::collections::HashMap;
 use crate::ai::AI;
 use serde::{Serialize, Deserialize};
@@ -14,8 +13,8 @@ struct TreeNode {
     // of the probability that the move
     // entering this node
     // leads to a win
-    numerator: u64,
-    denominator: u64,
+    numerator: u16,
+    denominator: u16,
     // maps moves from this node 
     // to the nodes that contain
     // their probability
@@ -25,38 +24,57 @@ struct TreeNode {
 
 #[derive(Serialize, Deserialize)]
 pub struct MonteCarloAI {
-   tree: Vec<TreeNode>,
+   board: Board,
+}
+
+impl AI for MonteCarloAI {
+    fn get_move(&mut self, last_move: i64) -> i64 {
+        if last_move != -1 {
+          self.board.make_move(last_move as usize);
+        }
+        let result = self.search(6000000) as i64;
+        self.board.make_move(result as usize);
+        return result;
+    }
+    
+    fn cleanup(&mut self) {}
 }
 
 impl MonteCarloAI {
     pub fn new() -> MonteCarloAI {
         let mut result = MonteCarloAI {
-            tree: Vec::new(),
+            board: Board::new(2),
         };
-        result.tree.push(TreeNode {
-                numerator: 0,
-                denominator: 0,
-                children: HashMap::new(),
-            });
         return result;
     }
 
-    pub fn from_save(filename: String) -> MonteCarloAI {
-        let result: MonteCarloAI = bincode::deserialize_from(File::open(filename).unwrap()).unwrap();
-        for p in &result.tree[0].children {
-           println!("{}: {}/{}", *p.0, result.tree[*p.1].numerator, result.tree[*p.1].denominator) 
+    pub fn search(&mut self, games: usize) -> usize {
+        let moves = self.board.get_moves();
+        let mut max = -1;
+        let mut best_move = 81;
+        let games_per_move = games / moves.len();
+        for m in moves {
+            let mut win_count = 0;
+            for _i in 0..games_per_move {
+                let mut next_board = self.board.clone();
+                next_board.make_move(m);
+                let result = self.search_helper(&mut next_board);
+                if result == -1 && self.board.get_to_move() == Player::O {
+                    win_count += 1;
+                } else if result == 1 && self.board.get_to_move() == Player::X {
+                    win_count += 1;
+                }
+            }
+            if win_count > max {
+                max = win_count;
+                best_move = m;
+            }
         }
-        return result;
+        println!("MCTS: {}", max as f64 / games_per_move as f64);
+        return best_move;
     }
 
-    pub fn train(&mut self, games: usize) {
-        for _i in 0..games {
-            let board = Board::new(2);
-            self.train_helper(&board, 0);
-        }
-    }
-
-    fn train_helper(&mut self, board: &Board, node_index: usize) -> i64 {
+    pub fn search_helper(&mut self, board: &mut Board) -> i64 {
         if board.winner == Player::O {
             return -1;
         } else if board.winner == Player::X {
@@ -65,35 +83,9 @@ impl MonteCarloAI {
             return 0;
         }
         let moves = board.get_moves();
-        let mut new_board = board.clone();
         let next_move = moves[rand::random::<usize>() % moves.len()];
-        new_board.make_move(next_move);
-        //let node = &mut self.tree[node_index];
-        if self.tree[node_index].children.len() == 0 {
-            for m in moves {
-                self.tree.push(
-                    TreeNode {
-                        numerator: 0,
-                        denominator: 0,
-                        children: HashMap::new(),
-                    }
-                );
-                let idx = self.tree.len() - 1;
-                self.tree[node_index].children.insert(m, idx);
-            }
-        }
-        let move_node_index = *self.tree[node_index].children.get(&next_move).unwrap();
-        let result = self.train_helper(&new_board, move_node_index);
-        if result == 1 && board.get_to_move() == Player::X {
-            self.tree[move_node_index].numerator += 1;
-        } else if result == -1 && board.get_to_move() == Player::O {
-            self.tree[move_node_index].numerator += 1;
-        }
-        self.tree[move_node_index].denominator += 1;
+        board.make_move(next_move);
+        let result = self.search_helper(board);
         return result;
-    }
-
-    pub fn save_to_file(&self, filename: String) {
-        bincode::serialize_into(File::create(filename).unwrap(), &self).unwrap();
     }
 }

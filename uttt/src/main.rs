@@ -11,6 +11,9 @@ use board::Player;
 use board::Square;
 mod simplesearch;
 use simplesearch::SimpleSearchAI;
+
+mod montecarloai;
+use montecarloai::MonteCarloAI;
 //use text_io::read;
 //use std::time::Instant;
 
@@ -23,100 +26,18 @@ struct Cli {
 }
 
 fn main() {
-    let level = 2;
-    let mut board = Board::new(level);
-    //let mut x_ai = HumanPlayer::new(level);
-   let mut x_ai = PipeAI::new("C:/ultimate-tictactoe/target/release/main.exe".to_string(),
-                               vec!["10".to_string()]);
-    let mut o_ai = PipeAI::new("C:/ultimate-tictactoe/target/release/main.exe".to_string(),
-                               vec!["10".to_string()]);
-    /*let mut x_ai = SimpleSearchAI::new(
-         |board: &Board| -> i32 {
-              if board.winner == Player::O {
-                 return -50000;
-              } else if board.winner == Player::X {
-                 return 50000;
-              }
-              return 0;
-         }
-        , 6);*/
-    /*let mut o_ai = SimpleSearchAI::new(
-         |board: &Board| -> i32 {
-              if board.winner == Player::O {
-                 return 50000;
-              } else if board.winner == Player::X {
-                 return -50000;
-              }
-              return 0;
-         }
-        , 7);*/
-    /*let mut o_ai = SimpleSearchAI::new(
-         |board: &Board| -> i32 {
-              if board.winner == Player::O {
-                 return 50000;
-              } else if board.winner == Player::X {
-                 return -50000;
-              }
-              let mut result = 0;
-              for i in [0, 9, 18, 27, 36, 45, 54, 63, 72].iter() {
-                  match board.get(Square { top_left: *i,
-                                        level: 1}) {
-                        Player::O => result += 500,
-                        Player::X => result -= 500,
-                        _ => ()
-                   }
-              }
-                  match board.get(Square { top_left: 36,
-                                        level: 1}) {
-                        Player::O => result += 1000,
-                        Player::X => result -= 1000,
-                        _ => ()
-                   }
-              for i in [4, 13, 22, 31, 40, 49, 58, 67, 76].iter() {
-                  match board.get(Square { top_left: *i,
-                                        level: 0}) {
-                        Player::O => result += 50,
-                        Player::X => result -= 50,
-                        _ => ()
-                   }
-              }
-              return result;
-         }
-        , 12);*/
-    /*let mut x_ai = SimpleSearchAI::new(
-         |board: &Board| -> i32 {
-              if board.winner == Player::O {
-                 return -50000;
-              } else if board.winner == Player::X {
-                 return 50000;
-              }
-              let mut result = 0;
-              for i in [0, 9, 18, 27, 36, 45, 54, 63, 72].iter() {
-                  match board.get(Square { top_left: *i,
-                                        level: 1}) {
-                        Player::O => result -= 500,
-                        Player::X => result += 500,
-                        _ => ()
-                   }
-              }
-                  match board.get(Square { top_left: 36,
-                                        level: 1}) {
-                        Player::O => result -= 1000,
-                        Player::X => result += 1000,
-                        _ => ()
-                   }
-              for i in [4, 13, 22, 31, 40, 49, 58, 67, 76].iter() {
-                  match board.get(Square { top_left: *i,
-                                        level: 0}) {
-                        Player::O => result -= 50,
-                        Player::X => result += 50,
-                        _ => ()
-                   }
-              }
-              return result;
-         }
-        , 10);*/
+    let mut o_ai = SimpleSearchAI::new(
+        SimpleSearchAI::ab_then_mc(20)
+    , 4);
+    let mut x_ai = SimpleSearchAI::new(
+        SimpleSearchAI::abriand_eval_1()
+    , 4);
+    play_game(&mut x_ai, &mut o_ai);
+}
+
+fn play_game(x_ai: &mut dyn AI, o_ai: &mut dyn AI) -> Player {
     let mut last_move = x_ai.get_move(-1);
+    let mut board = Board::new(2);
     loop {
         if last_move == -1 {
             println!("X forfeited");
@@ -156,5 +77,5 @@ fn main() {
     x_ai.cleanup();
     o_ai.cleanup();
     println!("{:?} wins", board.winner);
-    //println!("{:?}", v);
+    return board.winner;
 }
