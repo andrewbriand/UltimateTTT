@@ -574,6 +574,25 @@ mod tests {
          }
          assert!(b.winner == Player::O);
      }
+     #[test]
+     fn test_undo_basic_victory_2lv() {
+         let mut b = Board::new(2);
+         let moves = vec![0, 3, 27, 4, 36, 5, 46, 13, 37, 12, 28, 14, 47, 22, 38, 21, 29, 23];
+         for i in &moves {
+             assert!(b.make_move(*i));
+             b.pretty_print();
+             println!("move: {}", i);
+         }
+         for _i in &moves {
+             b.undo_move();
+         }
+         for i in &moves {
+             assert!(b.make_move(*i));
+             b.pretty_print();
+             println!("move: {}", i);
+         }
+         assert!(b.winner == Player::O);
+     }
 
      #[test]
      fn test_full_square_ascend_2lv() {
