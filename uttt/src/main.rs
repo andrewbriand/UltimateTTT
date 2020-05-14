@@ -34,32 +34,10 @@ fn main() {
             Box::new(move || Box::new(
                 SimpleSearchAI::new(SimpleSearchAI::abriand_eval_1(), 10)))
             ),
-            ("abriand1_12".to_string(), 
-            Box::new(move || Box::new(
-                SimpleSearchAI::new(SimpleSearchAI::abriand_eval_1(), 12)))
-            ),
             ("ab_then_mc_10_10".to_string(),
             Box::new(move || Box::new(
                 SimpleSearchAI::new(SimpleSearchAI::ab_then_mc(10), 10)))
             ),
-            ("ab_then_mc_10_20".to_string(),
-            Box::new(move || Box::new(
-                SimpleSearchAI::new(SimpleSearchAI::ab_then_mc(20), 10)))
-            ),
-            ("geng_10".to_string(),
-            Box::new(move || Box::new(
-                PipeAI::new("C:/ultimate-tictactoe/target/release/main.exe".to_string(),
-                            vec!["10".to_string()])))
-            ),
-            ("geng_12".to_string(),
-            Box::new(move || Box::new(
-                PipeAI::new("C:/ultimate-tictactoe/target/release/main.exe".to_string(),
-                            vec!["12".to_string()])))
-            ),
-            ("mcts_100000".to_string(),
-            Box::new(move || Box::new(
-                MonteCarloAI::new()
-            ))),
         ];
     let mut games: HashMap<(String, String), Player> = HashMap::new();
     let mut scores: Vec<f32> = vec![0.0; ais.len()];

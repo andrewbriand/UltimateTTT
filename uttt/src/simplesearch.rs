@@ -86,9 +86,14 @@ impl SimpleSearchAI {
 
     pub fn ab_then_mc(games: usize) -> Box<dyn Fn(&mut Board, Player) -> i32> {
         Box::new(move |_board: &mut Board, me: Player| -> i32 {
+              let opponent = match me {
+                  Player::X => Player::O,
+                  Player::O => Player::X,
+                  _ => panic!("AI is not a player"),
+              };
               if _board.winner == me {
                  return 50000;
-              } else if _board.winner == me {
+              } else if _board.winner == opponent {
                  return -50000;
               }
             let mut result = 0;
@@ -99,9 +104,9 @@ impl SimpleSearchAI {
                     let next_move = moves[rand::random::<usize>() % moves.len()];
                     board.make_move(next_move);
                 }
-                if board.winner == Player::O {
+                if board.winner == me {
                     result += 1;
-                } else if board.winner == Player::X {
+                } else if board.winner == opponent {
                     result += -1;
                 }
             }
@@ -111,16 +116,16 @@ impl SimpleSearchAI {
 
     pub fn abriand_eval_1() -> Box<dyn Fn(&mut Board, Player) -> i32> {
         Box::new(move |board: &mut Board, me: Player| -> i32 {
-              if board.winner == me {
-                 return 50000;
-              } else if board.winner == me {
-                 return -50000;
-              }
               let opponent = match me {
                   Player::X => Player::O,
                   Player::O => Player::X,
                   _ => panic!("AI is not a player"),
               };
+              if board.winner == me {
+                 return 50000;
+              } else if board.winner == opponent {
+                 return -50000;
+              }
               let mut result = 0;
               for i in [0, 9, 18, 27, 36, 45, 54, 63, 72].iter() {
                   match board.get(Square { top_left: *i,
