@@ -201,7 +201,7 @@ impl Board {
         if sqr.level == 2 {
             return self.spaces[90];
         }
-        panic!("Call to get with sqr > max_level");
+        panic!("Call to get with sqr > max_level: {}", sqr.level);
     }
 
     fn set(&mut self, sqr: Square, player: Player) {
@@ -382,6 +382,7 @@ impl Board {
             return false;
         }
         self.winner = Player::NEITHER;
+        self.set(Square{top_left: 0, level: 2}, Player::NEITHER);
         let t = self.move_history.pop().unwrap();
         self.set(Square {level: 0, top_left: t.space},
                  Player::NEITHER);

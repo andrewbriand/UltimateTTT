@@ -153,4 +153,34 @@ impl SimpleSearchAI {
               return result;
         })
     }
+    pub fn diagonal() -> Box<dyn Fn(&mut Board, Player) -> i32> {
+        Box::new(move |board: &mut Board, me: Player| -> i32 {
+              let opponent = match me {
+                  Player::X => Player::O,
+                  Player::O => Player::X,
+                  _ => panic!("AI is not a player"),
+              };
+              if board.winner == me {
+                 return 50000;
+              } else if board.winner == opponent {
+                 return -50000;
+              }
+              let mut result = 0;
+                  match board.get(Square { top_left: 36,
+                                        level: 1}) {
+                        x if me == x => result += 1000,
+                        x if opponent == x => result -= 1000,
+                        _ => ()
+                   }
+              for i in [0, 36, 72].iter() {
+                  match board.get(Square { top_left: *i,
+                                        level: 1}) {
+                        x if me == x => result += 1000,
+                        x if opponent == x => result -= 1000,
+                        _ => ()
+                   }
+              }
+              return result;
+        })
+    }
 }

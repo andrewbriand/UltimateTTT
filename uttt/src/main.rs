@@ -34,9 +34,17 @@ fn main() {
             Box::new(move || Box::new(
                 SimpleSearchAI::new(SimpleSearchAI::abriand_eval_1(), 10)))
             ),
-            ("ab_then_mc_10_10".to_string(),
+            ("abriand1_12".to_string(), 
             Box::new(move || Box::new(
-                SimpleSearchAI::new(SimpleSearchAI::ab_then_mc(10), 10)))
+                SimpleSearchAI::new(SimpleSearchAI::abriand_eval_1(), 12)))
+            ),
+            ("diagonal_10".to_string(),
+            Box::new(move || Box::new(
+                SimpleSearchAI::new(SimpleSearchAI::diagonal(), 10)))
+            ),
+            ("diagonal_12".to_string(),
+            Box::new(move || Box::new(
+                SimpleSearchAI::new(SimpleSearchAI::diagonal(), 12)))
             ),
         ];
     let mut games: HashMap<(String, String), Player> = HashMap::new();
