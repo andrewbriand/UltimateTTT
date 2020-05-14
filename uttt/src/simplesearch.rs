@@ -21,10 +21,11 @@ impl AI for SimpleSearchAI {
         let beta = 100000000;
         let mut result_move : i64 = -1;
         let moves = self.board.get_moves();
+        let mut new_board = self.board.clone();
         for m in moves {
-            let mut new_board = self.board.clone();
             new_board.make_move(m);
             let score = -self.search(&mut new_board, self.depth - 1, -beta, -alpha);
+            new_board.undo_move();
             if score > alpha {
                 alpha = score;
                 result_move = m as i64;
@@ -70,9 +71,9 @@ impl SimpleSearchAI {
             }
         }
         for m in moves {
-            let mut new_board = board.clone();
-            new_board.make_move(m);
-            let score = -self.search(&mut new_board, depth - 1, -beta, -alpha);
+            board.make_move(m);
+            let score = -self.search(board, depth - 1, -beta, -alpha);
+            board.undo_move();
             if score > alpha {
                 alpha = score;
             }

@@ -44,6 +44,18 @@ pub struct Square {
     pub level: usize,
 }
 
+#[derive(PartialEq)]
+#[derive(Clone, Copy)]
+#[derive(Debug)]
+#[derive(Hash)]
+#[derive(Eq)]
+#[derive(Serialize, Deserialize)]
+pub struct Turn {
+    pub space: usize,
+    pub capture: usize,
+    pub bounds: Square,
+}
+
 // Each tile of the tic tac toe board is assigned an integer
 // max_level = 1:
 // 0 1 2
@@ -87,7 +99,7 @@ pub struct Board {
     // The moves that have been made up until this point
     // where move_history[move_history.len() - 1] is the last
     // move made
-    pub move_history: Vec<usize>,
+    pub move_history: Vec<Turn>,
     // The size in spaces of a square at level index <= max_level
     level_sizes: Vec<usize>,
 }
@@ -125,7 +137,9 @@ impl Board {
                 max_level: max_level_,
                 winner: Player::NEITHER,
                 move_history: Vec::with_capacity(81),
-                level_sizes: Vec::new() };
+                level_sizes: Vec::new(),
+                //capture_history: Vec::new() 
+            };
         // TODO: it might be cleaner to initialize all squares (including
         // higher level ones) with NEITHER
         for _i in 0..(size_*size_) {
@@ -250,7 +264,9 @@ impl Board {
     pub fn get_moves(&self) -> Vec<usize> {
         let mut vec = Vec::with_capacity(81);
         for i in self.next_legal.top_left..=self.bottom_right(self.next_legal) {
-            if self.spaces[i] == Player::NEITHER {
+            if self.spaces[i] == Player::NEITHER 
+               && self.get(self.ascend(&Square{level: 0, 
+                   top_left: i}).0) == Player::NEITHER {
                 vec.push(i);
             }
         }
@@ -304,7 +320,9 @@ impl Board {
     pub fn make_move(&mut self, space: usize) -> bool {
         let move_sqr = Square {top_left: space, level: 0};
         // Make sure this square is available
-        if self.spaces[space] != Player::NEITHER {
+        if self.spaces[space] != Player::NEITHER
+            || self.get(self.ascend(&move_sqr).0) != Player::NEITHER
+            || self.winner != Player::NEITHER {
             return false;
         }
         // Check if the move is in the legal bounds
@@ -315,6 +333,11 @@ impl Board {
         self.spaces[space] = self.to_move;
         // Put the move into the move history
         //self.move_history.push(space);
+        let mut turn = Turn {
+            bounds: self.next_legal,
+            capture: 81,
+            space: space,
+        };
         
         // Update occupied
         let (mut _check_sqr, _) = self.ascend(&move_sqr);
@@ -326,7 +349,10 @@ impl Board {
                 // This player or DEAD now occupies this square
                 //self.occupied.insert(*check_sqr, victorious_player);
                 self.set(*check_sqr, victorious_player);
-                self.mark_as_dead(check_sqr);
+                //self.mark_as_dead(check_sqr);
+                if check_sqr.level == 1 {
+                    turn.capture = check_sqr.top_left;
+                }
                 // If this is the top level, the capturing player
                 // wins the game, or the game is drawn (winner = DEAD)
                 if check_sqr.level == self.max_level {
@@ -343,6 +369,7 @@ impl Board {
         if self.winner == Player::NEITHER {
             self.update_move_bounds(&move_sqr);
         }
+        self.move_history.push(turn);
         self.next_player();
         return true;
     }
@@ -351,54 +378,19 @@ impl Board {
     // in which case does nothing
     // Returns false iff no moves have been made
     pub fn undo_move(&mut self) -> bool {
-        // remove the move from the history
-        let space = match self.move_history.pop() {
-            Some(s) => s,
-            None => return false
-        };
-        let move_sqr = Square {top_left: space, level: 0};
-        // Remove this move from the board
-        self.spaces[space] = Player::NEITHER;
-
-        // Move to the last (same as next) player
+        if self.move_history.len() == 0 {
+            return false;
+        }
+        self.winner = Player::NEITHER;
+        let t = self.move_history.pop().unwrap();
+        self.set(Square {level: 0, top_left: t.space},
+                 Player::NEITHER);
+        if t.capture != 81 {
+            self.set(Square {level: 1, top_left: t.capture},
+                    Player::NEITHER);
+        }
+        self.next_legal = t.bounds;
         self.next_player();
-        
-        // Update occupied
-        let (mut _check_sqr, _) = self.ascend(&move_sqr);
-        let check_sqr = &mut _check_sqr;
-        // Check every level to see if removing the move changed the
-        // status of any of them
-        while check_sqr.level <= self.max_level {
-            if self.get(*check_sqr) != Player::NEITHER {
-                self.mark_as_neither(check_sqr);
-                let victorious_player = self.check_victory(&check_sqr);
-                if victorious_player == Player::NEITHER {
-                    // Neither player occupies this square anymore
-                    self.set(*check_sqr, Player::NEITHER);
-
-                    if check_sqr.level == self.max_level {
-                        // The game was over, but now it is not
-                        self.winner = Player::NEITHER;
-                    }
-                } else {
-                    self.mark_as_dead(check_sqr);
-                    break;
-                }
-            }
-            let (_check_sqr, _) = self.ascend(check_sqr);
-            *check_sqr = _check_sqr;
-        }
-        // Update the move bounds based on the new preceding move
-        let move_history_len = self.move_history.len();
-        // if we are back to the beginning of the game
-        if move_history_len == 0 {
-           self.next_legal = Square { top_left: 0, level: self.max_level };
-        } else {
-            let preceding_move = 
-                Square {top_left: self.move_history[move_history_len - 1], 
-                        level: 0};
-            self.update_move_bounds(&preceding_move);
-        }
         return true;
     }
 
@@ -773,7 +765,7 @@ mod tests {
         for m in moves {
             //b.make_move(m);
         }
-         get_moves_at_depths(&mut b, depth, &mut levels);
+         get_moves_at_depths_undo(&mut b, depth, &mut levels);
          println!("Search took {} seconds", now.elapsed().as_secs());
          for i in 0..depth {
              print!("{}", i);

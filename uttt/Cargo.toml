@@ -15,7 +15,3 @@ rand = "0.7.3"
 
 [profile.release]
 debug = true
-
-[[bin]]
-name = "montecarlo-train"
-path = "src/montecarlo-train.rs"
