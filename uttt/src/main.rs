@@ -1,5 +1,8 @@
+#![feature(llvm_asm)]
 use structopt::StructOpt;
 mod board;
+mod bitboard;
+use bitboard::BitBoard;
 mod ai;
 use ai::AI;
 pub use board::Board;
@@ -11,6 +14,7 @@ use board::Player;
 use board::Square;
 mod simplesearch;
 use simplesearch::SimpleSearchAI;
+ use std::time::Instant;
 
 use std::collections::HashMap;
 
@@ -19,32 +23,26 @@ use montecarloai::MonteCarloAI;
 //use text_io::read;
 //use std::time::Instant;
 
-#[derive(StructOpt)]
+/*#[derive(StructOpt)]
 struct Cli {
     #[structopt(parse(from_os_str))]
     o_ai_path: std::path::PathBuf,
     #[structopt(parse(from_os_str))]
     x_ai_path: std::path::PathBuf,
-}
+}*/
 
 fn main() {
     let ais: Vec<(String, Box<dyn Fn() -> Box<dyn AI>>)> = 
         vec![
-            ("abriand1_10".to_string(), 
+            /*("javascript_10".to_string(),
             Box::new(move || Box::new(
-                SimpleSearchAI::new(SimpleSearchAI::abriand_eval_1(), 10)))
-            ),
+                PipeAI::new("C:/Program Files/nodejs/node.exe".to_string(), 
+                vec!["uttt.js".to_string(), "10".to_string()])
+            ))
+            ),*/
             ("abriand1_12".to_string(), 
             Box::new(move || Box::new(
                 SimpleSearchAI::new(SimpleSearchAI::abriand_eval_1(), 12)))
-            ),
-            ("diagonal_10".to_string(),
-            Box::new(move || Box::new(
-                SimpleSearchAI::new(SimpleSearchAI::diagonal(), 10)))
-            ),
-            ("diagonal_12".to_string(),
-            Box::new(move || Box::new(
-                SimpleSearchAI::new(SimpleSearchAI::diagonal(), 12)))
             ),
         ];
     let mut games: HashMap<(String, String), Player> = HashMap::new();
@@ -81,7 +79,10 @@ fn main() {
 }
 
 fn play_game(x_ai: &mut dyn AI, o_ai: &mut dyn AI) -> Player {
+    let mut times_vec = Vec::new();
+    let mut now = Instant::now();
     let mut last_move = x_ai.get_move(-1);
+    times_vec.push(now.elapsed().as_millis());
     let mut board = Board::new(2);
     loop {
         if last_move == -1 {
@@ -115,10 +116,13 @@ fn play_game(x_ai: &mut dyn AI, o_ai: &mut dyn AI) -> Player {
         if board.winner != Player::NEITHER {
             break;
         }
+        now = Instant::now();
         last_move = x_ai.get_move(last_move);
+        times_vec.push(now.elapsed().as_millis());
     }
     board.pretty_print();
     println!("{:?}", board.move_history);
+    println!("{:?}", times_vec);
     x_ai.cleanup();
     o_ai.cleanup();
     println!("{:?} wins", board.winner);
