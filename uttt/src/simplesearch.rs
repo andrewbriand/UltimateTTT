@@ -189,11 +189,17 @@ impl SimpleSearchAI {
               let mut result : i32 = 0;
               for i in 0..9 {
                   if board.x_occupancy & ((1 as u128) << (81 + i)) != 0 {
-                      result += (me as i32) * 500;
+                      result += (me as i32) * 1000;
                   } else if board.o_occupancy & ((1 as u128) << (81 + i)) != 0 {
-                      result -= (me as i32) * 500;
+                      result -= (me as i32) * 1000;
                   }
               }
+              if board.x_occupancy & ((1 as u128) << (81 + 4)) != 0 {
+                  result += (me as i32) * 1000;
+              } else if board.o_occupancy & ((1 as u128) << (81 + 4)) != 0 {
+                  result -= (me as i32) * 1000;
+              }
+              
               for i in [4, 13, 22, 31, 40, 49, 58, 67, 76].iter() {
                   if board.x_occupancy & ((1 as u128) << i) != 0 as u128 {
                       result += (me as i32) * 100;
