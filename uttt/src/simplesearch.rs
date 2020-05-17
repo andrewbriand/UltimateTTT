@@ -53,9 +53,25 @@ impl SimpleSearchAI {
                 return (-1, -(self.eval)(board, self.me));
             }
         }
-        let mut m_lower_half: u64 = (moves & ((1 << 64) - 1)) as u64;
-        let mut m_upper_half: u64 = (moves >> 64) as u64;
         let mut result_move = -1;
+        BitBoard::iterate_moves(moves, &mut |next_move: u128, next_move_sf: i64| {
+           let mut next_b = board.clone();
+           next_b.make_move(next_move);
+           let (_, mut score) = self.search(&mut next_b, depth - 1, -beta, -alpha);
+           score = -score;
+           if score > alpha {
+               alpha = score;
+               result_move = next_move_sf;
+           }
+
+           if alpha >= beta {
+               return false;
+           }
+           return true;
+        });
+        return (result_move, alpha);
+        /*let mut m_lower_half: u64 = (moves & ((1 << 64) - 1)) as u64;
+        let mut m_upper_half: u64 = (moves >> 64) as u64;
         while m_lower_half != 0 {
            let mut leading_zeros : usize;
            unsafe {
@@ -100,8 +116,7 @@ impl SimpleSearchAI {
            if alpha >= beta {
                return (result_move, alpha);
            }
-        }
-        return (result_move, alpha);
+        }*/
     }
 
     /*pub fn ab_then_mc(games: usize) -> Box<dyn Fn(&mut BitBoard, Player) -> i32> {

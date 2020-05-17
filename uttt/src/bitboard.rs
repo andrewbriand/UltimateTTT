@@ -151,7 +151,7 @@ impl BitBoard {
 
     }
 
-    pub fn iterate_moves(moves: u128, fun: &mut dyn Fn(u128)) {
+    pub fn iterate_moves(moves: u128, fun: &mut dyn FnMut(u128, i64) -> bool) {
          let mut m_lower_half: u64 = (moves & ((1 << 64) - 1)) as u64;
          let mut m_upper_half: u64 = (moves >> 64) as u64;
          while m_lower_half != 0 {
@@ -163,7 +163,10 @@ impl BitBoard {
             m_lower_half &= !(1 << (63 - leading_zeros));
             leading_zeros += 64;
             let next_move = (1 as u128) << (127 - leading_zeros);
-            fun(next_move);
+            let next_move_fs = (127 - leading_zeros) as i64;
+            if !fun(next_move, next_move_fs) {
+                return;
+            }
          }
          while m_upper_half != 0 {
             let mut leading_zeros : usize;
@@ -173,7 +176,10 @@ impl BitBoard {
             }
             let next_move = (1 as u128) << (127 - leading_zeros);
             m_upper_half &= !(1 << (63 - leading_zeros));
-            fun(next_move);
+            let next_move_fs = (127 - leading_zeros) as i64;
+            if !fun(next_move, next_move_fs) {
+                return;
+            }
          }
     }
 }
@@ -338,35 +344,13 @@ mod tests {
          }
          let out_len = out.len();
         // out[out_len - depth] += moves.len();
-         let mut m_lower_half: u64 = (moves & ((1 << 64) - 1)) as u64;
-         let mut m_upper_half: u64 = (moves >> 64) as u64;
-         while m_lower_half != 0 {
-            let mut leading_zeros : usize;
-            unsafe {
-                    llvm_asm!("lzcnt $1, $0" : "=r"(leading_zeros) 
-                    : "r"(m_lower_half));
-                }
-            m_lower_half &= !(1 << (63 - leading_zeros));
-            leading_zeros += 64;
-            let next_move = (1 as u128) << (127 - leading_zeros);
+        BitBoard::iterate_moves(moves, &mut |next_move: u128, next_move_sf: i64| {
             out[out_len - depth] += 1;
             let mut next_b = b.clone();
             next_b.make_move(next_move);
             get_moves_at_depths_bitboard(&mut next_b, depth - 1, out);
-         }
-         while m_upper_half != 0 {
-            let mut leading_zeros : usize;
-            unsafe {
-                    llvm_asm!("lzcnt $1, $0" : "=r"(leading_zeros) 
-                    : "r"(m_upper_half));
-            }
-            let next_move = (1 as u128) << (127 - leading_zeros);
-            m_upper_half &= !(1 << (63 - leading_zeros));
-            out[out_len - depth] += 1;
-            let mut next_b = b.clone();
-            next_b.make_move(next_move);
-            get_moves_at_depths_bitboard(&mut next_b, depth - 1, out);
-         }
+            return true;
+        });
     }
 
      fn get_moves_at_depths_no_vector_bitboard(b: &mut BitBoard, depth: usize) -> usize {
