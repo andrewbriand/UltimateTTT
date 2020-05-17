@@ -1,4 +1,3 @@
-#![feature(asm)]
 use crate::board::Board;
 use crate::board::Player;
 use std::time::Instant;
@@ -31,8 +30,8 @@ static WIN_TABLE: [u64; 8] = [
     0xffffffffffffffff,
 ];
  
-static cell_mask: u128 = (1 << 81) - 1;
-static winner_mask: u128 = (1 << 90);
+static CELL_MASK: u128 = (1 << 81) - 1;
+static WINNER_MASK: u128 = (1 << 90);
 
 impl BitBoard {
     pub fn new() -> BitBoard {
@@ -40,11 +39,11 @@ impl BitBoard {
             x_occupancy: 0,
             o_occupancy: 0,
             to_move: 1,
-            next_legal: cell_mask,
+            next_legal: CELL_MASK,
         }
     }
 
-    fn update_occupancy(&mut self, mut occup: u128, m: u128, block_num: u32, block_offset: u32) -> u128 {
+    fn update_occupancy(&mut self, mut occup: u128, m: u128, block_num: usize, block_offset: usize) -> u128 {
         //println!("block_num: {}", block_num);
         //println!("block_offset: {}", block_offset);
         
@@ -75,15 +74,20 @@ impl BitBoard {
         if m & self.next_legal == 0 {
             return false;
         }
-        let mut m_copy = m;
-        let mut space = 0;
-        while m_copy != 1 {
-            space += 1;
-            m_copy >>= 1;
+        let mut leading_zeros : usize;
+        let m_lower_half: u64 = (m & ((1 << 64) - 1)) as u64;
+        let m_upper_half: u64 = (m >> 64) as u64;
+        unsafe {
+            if m_upper_half == 0 {
+                llvm_asm!("lzcnt $1, $0" : "=r"(leading_zeros) 
+                : "r"(m_lower_half));
+                leading_zeros += 64;
+            } else {
+                llvm_asm!("lzcnt $1, $0" : "=r"(leading_zeros) 
+                : "r"(m_upper_half));
+            }
         }
-        // let leading_zeros : usize;
-        //asm!("lzcnt %1, %0" : "=r"(leading_zeros) 
-                         //     : "r"(m));
+        let mut space = 127 - leading_zeros;
         let block_num = space / 9;
         let block_offset = space % 9;
         match self.to_move {
@@ -99,7 +103,7 @@ impl BitBoard {
             self.next_legal = (0x1FF as u128) << (block_offset * 9);
             //println!("self.next_legal: {:#0130b}", self.next_legal);
         } else {
-            self.next_legal = cell_mask;
+            self.next_legal = CELL_MASK;
             for i in 0..9 {
                 if self.x_occupancy & (1 << (81 + i)) != 0 ||
                 self.o_occupancy & (1 << (81 + i)) != 0  {
@@ -119,10 +123,10 @@ impl BitBoard {
     }
 
     pub fn get_winner(&self) -> i8 {
-        if self.x_occupancy & winner_mask != 0 {
+        if self.x_occupancy & WINNER_MASK != 0 {
             return 1;
         }
-        if self.o_occupancy & winner_mask != 0 {
+        if self.o_occupancy & WINNER_MASK != 0 {
             return -1;
         }
         if (((self.o_occupancy | self.x_occupancy) >> 81) & 0x1FF) == 0x1FF {
