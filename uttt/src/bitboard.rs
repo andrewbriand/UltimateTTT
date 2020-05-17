@@ -6,12 +6,12 @@ use std::time::Instant;
 // Only supports 2 levels
 #[derive(Debug)]
 #[derive(Clone)]
-struct BitBoard {
-    x_occupancy: u128,
-    o_occupancy: u128,
+pub struct BitBoard {
+    pub x_occupancy: u128,
+    pub o_occupancy: u128,
     // 1 if X is to move
     // -1 if O is to move
-    to_move: i8,
+    pub to_move: i8,
     // A bit mask that is 1 in the cells
     // that are possible next moves
     next_legal: u128,
@@ -134,6 +134,10 @@ impl BitBoard {
             return -2;
         }
         return 0;
+    }
+
+    pub fn get_to_move(&self) -> i8 {
+        return self.to_move;
     }
 
     pub fn get_moves(&self) -> u128 {
@@ -298,22 +302,46 @@ mod tests {
          }
      }*/
 
-     fn get_moves_at_depths_bitboard(b: &mut BitBoard, depth: usize, out: &mut Vec<usize>) {
+    fn get_moves_at_depths_bitboard(b: &mut BitBoard, depth: usize, out: &mut Vec<usize>) {
          if depth == 0 {
              return;
          }
-         let moves = b.get_moves();
+         let mut moves = b.get_moves();
+         if moves == 0 {
+             return;
+         }
          let out_len = out.len();
         // out[out_len - depth] += moves.len();
-         for i in 0..81 {
-             if ((1 << i) & moves) != 0 {
-                out[out_len - depth] += 1;
-                let mut next_b = b.clone();
-                assert!(next_b.make_move(1 << i));
-                get_moves_at_depths_bitboard(&mut next_b, depth - 1, out);
-             }
+         let mut m_lower_half: u64 = (moves & ((1 << 64) - 1)) as u64;
+         let mut m_upper_half: u64 = (moves >> 64) as u64;
+         while m_lower_half != 0 {
+            let mut leading_zeros : usize;
+            unsafe {
+                    llvm_asm!("lzcnt $1, $0" : "=r"(leading_zeros) 
+                    : "r"(m_lower_half));
+                }
+            m_lower_half &= !(1 << (63 - leading_zeros));
+            leading_zeros += 64;
+            let next_move = (1 as u128) << (127 - leading_zeros);
+            out[out_len - depth] += 1;
+            let mut next_b = b.clone();
+            next_b.make_move(next_move);
+            get_moves_at_depths_bitboard(&mut next_b, depth - 1, out);
          }
-     }
+         while m_upper_half != 0 {
+            let mut leading_zeros : usize;
+            unsafe {
+                    llvm_asm!("lzcnt $1, $0" : "=r"(leading_zeros) 
+                    : "r"(m_upper_half));
+            }
+            let next_move = (1 as u128) << (127 - leading_zeros);
+            m_upper_half &= !(1 << (63 - leading_zeros));
+            out[out_len - depth] += 1;
+            let mut next_b = b.clone();
+            next_b.make_move(next_move);
+            get_moves_at_depths_bitboard(&mut next_b, depth - 1, out);
+         }
+    }
 
      fn get_moves_at_depths_no_vector_bitboard(b: &mut BitBoard, depth: usize) -> usize {
          if depth == 0 {
