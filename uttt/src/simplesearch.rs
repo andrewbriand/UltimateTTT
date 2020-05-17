@@ -19,59 +19,9 @@ impl AI for SimpleSearchAI {
         self.me = self.board.to_move;
         let mut alpha = -100000000;
         let beta = 100000000;
-        let mut result_move : i64 = -1;
-        let moves = self.board.get_moves();
-        let mut m_lower_half: u64 = (moves & ((1 << 64) - 1)) as u64;
-        let mut m_upper_half: u64 = (moves >> 64) as u64;
-        while m_lower_half != 0 {
-           let mut leading_zeros : usize;
-           unsafe {
-                   llvm_asm!("lzcnt $1, $0" : "=r"(leading_zeros) 
-                   : "r"(m_lower_half));
-               }
-           m_lower_half &= !(1 << (63 - leading_zeros));
-           leading_zeros += 64;
-           let next_move = (1 as u128) << (127 - leading_zeros);
-           let mut next_b = self.board.clone();
-           next_b.make_move(next_move);
-           let score = -self.search(&mut next_b, self.depth - 1, -beta, -alpha);
-           let this_move = (127 - leading_zeros) as i64;
-           if score > alpha {
-               alpha = score;
-               result_move = this_move;
-           }
-
-           if alpha >= beta {
-               self.board.make_move(1 << result_move);
-               println!("result_score: {}", alpha);
-               return result_move;
-           }
-        }
-        while m_upper_half != 0 {
-           let mut leading_zeros : usize;
-           unsafe {
-                   llvm_asm!("lzcnt $1, $0" : "=r"(leading_zeros) 
-                   : "r"(m_upper_half));
-           }
-           let next_move = (1 as u128) << (127 - leading_zeros);
-            m_upper_half &= !(1 << (63 - leading_zeros));
-           let mut next_b = self.board.clone();
-           next_b.make_move(next_move);
-           let score = -self.search(&mut next_b, self.depth - 1, -beta, -alpha);
-           let this_move = (127 - leading_zeros) as i64;
-           if score > alpha {
-               alpha = score;
-               result_move = this_move;
-           }
-
-           if alpha >= beta {
-               self.board.make_move(1 << result_move);
-               println!("result_score: {}", alpha);
-               return result_move;
-           }
-        }
+        let (result_move, result_score) = self.search(&mut self.board.clone(), self.depth, alpha, beta);
+        println!("result score: {}", result_score);
         self.board.make_move(1 << result_move);
-        println!("result_score: {}", alpha);
         return result_move;
     }
 
@@ -90,21 +40,22 @@ impl SimpleSearchAI {
     }
 
     pub fn search(&self, board: &mut BitBoard, depth: usize, 
-                  _alpha: i32, beta: i32) -> i32 {
+                  _alpha: i32, beta: i32) -> (i64, i32) {
         let mut alpha = _alpha;
         if depth == 0 {
-            return (self.eval)(board, self.me);
+            return (-1, (self.eval)(board, self.me));
         }
         let moves = board.get_moves();
         if moves == 0 {
             if depth % 2 == 0 {
-                return (self.eval)(board, self.me);
+                return (-1, (self.eval)(board, self.me));
             } else {
-                return -(self.eval)(board, self.me);
+                return (-1, -(self.eval)(board, self.me));
             }
         }
         let mut m_lower_half: u64 = (moves & ((1 << 64) - 1)) as u64;
         let mut m_upper_half: u64 = (moves >> 64) as u64;
+        let mut result_move = -1;
         while m_lower_half != 0 {
            let mut leading_zeros : usize;
            unsafe {
@@ -116,14 +67,16 @@ impl SimpleSearchAI {
            let next_move = (1 as u128) << (127 - leading_zeros);
            let mut next_b = board.clone();
            next_b.make_move(next_move);
-           let score = -self.search(&mut next_b, depth - 1, -beta, -alpha);
+           let (_, mut score) = self.search(&mut next_b, depth - 1, -beta, -alpha);
+           score = -score;
            let this_move = (127 - leading_zeros) as i64;
            if score > alpha {
                alpha = score;
+               result_move = this_move;
            }
 
            if alpha >= beta {
-               return alpha;
+               return (result_move, alpha);
            }
         }
         while m_upper_half != 0 {
@@ -136,17 +89,19 @@ impl SimpleSearchAI {
             m_upper_half &= !(1 << (63 - leading_zeros));
            let mut next_b = board.clone();
            next_b.make_move(next_move);
-           let score = -self.search(&mut next_b, depth - 1, -beta, -alpha);
+           let (_, mut score) = self.search(&mut next_b, depth - 1, -beta, -alpha);
+           score = -score;
            let this_move = (127 - leading_zeros) as i64;
            if score > alpha {
                alpha = score;
+               result_move = this_move;
            }
 
            if alpha >= beta {
-               return alpha;
+               return (result_move, alpha);
            }
         }
-        return alpha;
+        return (result_move, alpha);
     }
 
     /*pub fn ab_then_mc(games: usize) -> Box<dyn Fn(&mut BitBoard, Player) -> i32> {

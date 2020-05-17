@@ -150,6 +150,32 @@ impl BitBoard {
     pub fn pretty_print(&self) {
 
     }
+
+    pub fn iterate_moves(moves: u128, fun: &mut dyn Fn(u128)) {
+         let mut m_lower_half: u64 = (moves & ((1 << 64) - 1)) as u64;
+         let mut m_upper_half: u64 = (moves >> 64) as u64;
+         while m_lower_half != 0 {
+            let mut leading_zeros : usize;
+            unsafe {
+                    llvm_asm!("lzcnt $1, $0" : "=r"(leading_zeros) 
+                    : "r"(m_lower_half));
+                }
+            m_lower_half &= !(1 << (63 - leading_zeros));
+            leading_zeros += 64;
+            let next_move = (1 as u128) << (127 - leading_zeros);
+            fun(next_move);
+         }
+         while m_upper_half != 0 {
+            let mut leading_zeros : usize;
+            unsafe {
+                    llvm_asm!("lzcnt $1, $0" : "=r"(leading_zeros) 
+                    : "r"(m_upper_half));
+            }
+            let next_move = (1 as u128) << (127 - leading_zeros);
+            m_upper_half &= !(1 << (63 - leading_zeros));
+            fun(next_move);
+         }
+    }
 }
 
 #[cfg(test)]
