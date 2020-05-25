@@ -3,10 +3,15 @@ use structopt::StructOpt;
 mod board;
 mod bitboard;
 use bitboard::BitBoard;
+mod killermovesearch;
+use killermovesearch::KillerMoveAI;
+
 mod ai;
 use ai::AI;
 pub use board::Board;
 mod humanplayer;
+mod quietextend;
+use quietextend::QuietExtendAI;
 mod pipeai;
 pub use pipeai::PipeAI;
 pub use humanplayer::HumanPlayer;
@@ -34,39 +39,53 @@ struct Cli {
 fn main() {
     let ais: Vec<(String, Box<dyn Fn() -> Box<dyn AI>>)> = 
         vec![
-            /*("javascript_10".to_string(),
+            ("javascript_10".to_string(),
             Box::new(move || Box::new(
                 PipeAI::new("C:/Program Files/nodejs/node.exe".to_string(), 
                 vec!["uttt.js".to_string(), "10".to_string()])
             ))
-            ),*/
-            ("abriand1_12".to_string(), 
-            Box::new(move || Box::new(
-                SimpleSearchAI::new(SimpleSearchAI::abriand_eval_1(), 12)))
             ),
+            ("diagonal_10".to_string(), 
+            Box::new(move || Box::new(
+                SimpleSearchAI::new(SimpleSearchAI::diagonal(), 10)))
+            ),
+            /*("killer_10".to_string(), 
+            Box::new(move || Box::new(
+                KillerMoveAI::new(KillerMoveAI::abriand_eval_1(), 10)))
+            ),
+            ("quiet_10".to_string(), 
+            Box::new(move || Box::new(
+                QuietExtendAI::new(QuietExtendAI::abriand_eval_1(), 10)))
+            ),*/
+            /*("abriand1_14".to_string(), 
+            Box::new(move || Box::new(
+                SimpleSearchAI::new(SimpleSearchAI::abriand_eval_1(), 14)))
+            ),*/
         ];
     let mut games: HashMap<(String, String), Player> = HashMap::new();
     let mut scores: Vec<f32> = vec![0.0; ais.len()];
     for x_idx in 0..ais.len() {
         for o_idx in 0..ais.len() {
-            let (o_name, o_ctor) = &ais[o_idx];
-            let (x_name, x_ctor) = &ais[x_idx];
-            match play_game(&mut *x_ctor(), &mut *o_ctor()) {
-                Player::X => {
-                    scores[x_idx] += 1.0;
-                    games.insert((x_name.clone(), o_name.clone()), Player::X);
-                },
-                Player::O => {
-                    scores[o_idx] += 1.0;
-                    games.insert((x_name.clone(), o_name.clone()), Player::O);
-                },
-                Player::DEAD => {
-                    scores[x_idx] += 0.5;
-                    scores[o_idx] += 0.5;
-                    games.insert((x_name.clone(), o_name.clone()), Player::DEAD);
-                },
-                Player::NEITHER => panic!("NEITHER won"),
-            };
+            if x_idx != o_idx {
+                let (o_name, o_ctor) = &ais[o_idx];
+                let (x_name, x_ctor) = &ais[x_idx];
+                match play_game(&mut *x_ctor(), &mut *o_ctor()) {
+                    Player::X => {
+                        scores[x_idx] += 1.0;
+                        games.insert((x_name.clone(), o_name.clone()), Player::X);
+                    },
+                    Player::O => {
+                        scores[o_idx] += 1.0;
+                        games.insert((x_name.clone(), o_name.clone()), Player::O);
+                    },
+                    Player::DEAD => {
+                        scores[x_idx] += 0.5;
+                        scores[o_idx] += 0.5;
+                        games.insert((x_name.clone(), o_name.clone()), Player::DEAD);
+                    },
+                    Player::NEITHER => panic!("NEITHER won"),
+                };
+            }
         }
     }
     for g in games {

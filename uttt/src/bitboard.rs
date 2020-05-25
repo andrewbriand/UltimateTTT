@@ -151,6 +151,55 @@ impl BitBoard {
 
     }
 
+    pub fn mask_to_sf(mask: u128) -> u64 {
+        let mut leading_zeros: u64;
+        let m_lower_half: u64 = (mask & ((1 << 64) - 1)) as u64;
+        let m_upper_half: u64 = (mask >> 64) as u64;
+        unsafe {
+            if m_upper_half == 0 {
+                llvm_asm!("lzcnt $1, $0" : "=r"(leading_zeros) 
+                : "r"(m_lower_half));
+                leading_zeros += 64;
+            } else {
+                llvm_asm!("lzcnt $1, $0" : "=r"(leading_zeros) 
+                : "r"(m_upper_half));
+            }
+        }
+        return 127 - leading_zeros;
+    }
+
+    pub fn random_move(moves: u128) -> u128 {
+        assert!(moves != 0);
+         let m_lower_half: u64 = (moves & ((1 << 64) - 1)) as u64;
+         let m_upper_half: u64 = (moves >> 64) as u64;
+         let mut upper_popcnt: u64;
+         let mut lower_popcnt: u64;
+         unsafe {
+             llvm_asm!("popcnt $1, $0" : "=r"(upper_popcnt)
+                            : "r"(m_upper_half));
+             llvm_asm!("popcnt $1, $0" : "=r"(lower_popcnt)
+                            : "r"(m_lower_half));
+         }
+         let mut total_popcnt = upper_popcnt + lower_popcnt;
+         let mut n = rand::random::<u64>() % total_popcnt; 
+         if n < lower_popcnt {
+             let mut result: u64;
+             unsafe {
+                llvm_asm!("pdepq $2, $1, $0" : "=r"(result)
+                            : "r"((1 << n) as u64), "r"(m_lower_half));
+             }
+             return result as u128;
+         } else {
+             n -= lower_popcnt;
+             let mut result: u64; 
+             unsafe {
+                llvm_asm!("pdepq $2, $1, $0" : "=r"(result)
+                            : "r"((1 << n) as u64), "r"(m_upper_half));
+             }
+             return (result as u128) << 64;
+         }
+    }
+
     pub fn iterate_moves(moves: u128, fun: &mut dyn FnMut(u128, i64) -> bool) {
          let mut m_lower_half: u64 = (moves & ((1 << 64) - 1)) as u64;
          let mut m_upper_half: u64 = (moves >> 64) as u64;

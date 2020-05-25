@@ -70,84 +70,52 @@ impl SimpleSearchAI {
            return true;
         });
         return (result_move, alpha);
-        /*let mut m_lower_half: u64 = (moves & ((1 << 64) - 1)) as u64;
-        let mut m_upper_half: u64 = (moves >> 64) as u64;
-        while m_lower_half != 0 {
-           let mut leading_zeros : usize;
-           unsafe {
-                   llvm_asm!("lzcnt $1, $0" : "=r"(leading_zeros) 
-                   : "r"(m_lower_half));
-               }
-           m_lower_half &= !(1 << (63 - leading_zeros));
-           leading_zeros += 64;
-           let next_move = (1 as u128) << (127 - leading_zeros);
-           let mut next_b = board.clone();
-           next_b.make_move(next_move);
-           let (_, mut score) = self.search(&mut next_b, depth - 1, -beta, -alpha);
-           score = -score;
-           let this_move = (127 - leading_zeros) as i64;
-           if score > alpha {
-               alpha = score;
-               result_move = this_move;
-           }
-
-           if alpha >= beta {
-               return (result_move, alpha);
-           }
-        }
-        while m_upper_half != 0 {
-           let mut leading_zeros : usize;
-           unsafe {
-                   llvm_asm!("lzcnt $1, $0" : "=r"(leading_zeros) 
-                   : "r"(m_upper_half));
-           }
-           let next_move = (1 as u128) << (127 - leading_zeros);
-            m_upper_half &= !(1 << (63 - leading_zeros));
-           let mut next_b = board.clone();
-           next_b.make_move(next_move);
-           let (_, mut score) = self.search(&mut next_b, depth - 1, -beta, -alpha);
-           score = -score;
-           let this_move = (127 - leading_zeros) as i64;
-           if score > alpha {
-               alpha = score;
-               result_move = this_move;
-           }
-
-           if alpha >= beta {
-               return (result_move, alpha);
-           }
-        }*/
     }
 
-    /*pub fn ab_then_mc(games: usize) -> Box<dyn Fn(&mut BitBoard, Player) -> i32> {
-        Box::new(move |_board: &mut BitBoard, me: Player| -> i32 {
-              let opponent = match me {
-                  Player::X => Player::O,
-                  Player::O => Player::X,
-                  _ => panic!("AI is not a player"),
-              };
-              if _board.winner == me {
-                 return 50000;
-              } else if _board.winner == opponent {
-                 return -50000;
-              }
-            let mut result = 0;
-            for _i in 0..games {
-                let mut board = _board.clone();
-                while board.winner == Player::NEITHER {
-                    let moves = board.get_moves();
-                    let next_move = moves[rand::random::<usize>() % moves.len()];
-                    board.make_move(next_move);
-                }
-                if board.winner == me {
-                    result += 1;
-                } else if board.winner == opponent {
-                    result += -1;
-                }
+    fn branching_mc(board: &mut BitBoard, branching: u8, me: i8) -> i32 {
+        if board.get_winner() == me {
+            return 1;
+        } else if board.get_winner() == -me {
+            return -1;
+        } else if board.get_winner() == -2 {
+            return 0;
+        }
+        let mut result = 0;
+        BitBoard::iterate_moves(board.get_moves(), &mut |m: u128, sf: i64| {
+            if rand::random::<u8>() < branching {
+                let mut n_b = board.clone();
+                n_b.make_move(m);
+                result += SimpleSearchAI::branching_mc(&mut n_b, branching, me);
             }
-            return result;
+            return true;
+        });
+        return result;
+    }
+
+    pub fn ab_then_mc(games: u64) -> Box<dyn Fn(&mut BitBoard, i8) -> i32> {
+        Box::new(move |_board: &mut BitBoard, me: i8| -> i32 {
+              if _board.get_winner() == me {
+                 return 50000;
+              } else if _board.get_winner() == -me {
+                 return -50000;
+              } else if _board.get_winner() == -2 {
+                  return 0;
+              }
+              let mut result = 0;
+              for i in 0..games {
+                  let mut new_board = _board.clone();
+                  while new_board.get_winner() == 0 {
+                      new_board.make_move(BitBoard::random_move(new_board.get_moves()));
+                  } 
+                  if new_board.get_winner() == me {
+                      result += 1;
+                  } else if new_board.get_winner() == -me {
+                      result -= 1;
+                  }
+              }
+              return result;
         })
-    }*/
+    }
 
     pub fn abriand_eval_1() -> Box<dyn Fn(&mut BitBoard, i8) -> i32> {
         Box::new(move |board: &mut BitBoard, me: i8| -> i32 {
@@ -177,6 +145,97 @@ impl SimpleSearchAI {
                       result -= (me as i32) * 100;
                   }
               }
+              return result;
+        })
+    }
+
+    fn num_occupied_x(board: &mut BitBoard, cells: Vec<i32>) -> u32 {
+        let mut r = 0;
+        for i in cells.iter() {
+            if board.x_occupancy & ((1 as u128) << i) != 0 {
+                r += 1;
+            }
+        }
+        return r;
+    }
+
+    fn num_occupied_o(board: &mut BitBoard, cells: Vec<i32>) -> u32 {
+        let mut r = 0;
+        for i in cells.iter() {
+            if board.o_occupancy & ((1 as u128) << i) != 0 {
+                r += 1;
+            }
+        }
+        return r;
+    }
+
+    pub fn diagonal() -> Box<dyn Fn(&mut BitBoard, i8) -> i32> {
+        Box::new(move |board: &mut BitBoard, me: i8| -> i32 {
+              if board.get_winner() == me {
+                 return 50000;
+              } else if board.get_winner() == -me {
+                 return -50000;
+              }
+              let partial_credit = 100;
+              let mut result : i32 = 0;
+              for i in 0..9 {
+                  if board.x_occupancy & ((1 as u128) << (81 + i)) != 0 {
+                      result += (me as i32) * 1000;
+                  } else if board.o_occupancy & ((1 as u128) << (81 + i)) != 0 {
+                      result -= (me as i32) * 1000;
+                  } else {
+                      for j in 0..3 {
+                        if SimpleSearchAI::num_occupied_x(board, vec![9*i + j, 9*i + j + 3, 9*i + j + 6]) == 2 {
+                          result += (me as i32) * partial_credit;
+                        } 
+                        if SimpleSearchAI::num_occupied_o(board, vec![9*i + j, 9*i + j + 3, 9*i + j + 6]) == 2 {
+                          result -= (me as i32) * partial_credit;
+                        }
+                      }
+                      for j in [0, 3, 6].iter() {
+                        if SimpleSearchAI::num_occupied_x(board, vec![9*i + j, 9*i + j + 1, 9*i + j + 2]) == 2 {
+                          result += (me as i32) * partial_credit;
+                        }
+                        if SimpleSearchAI::num_occupied_o(board, vec![9*i + j, 9*i + j + 1, 9*i + j + 2]) == 2 {
+                          result -= (me as i32) * partial_credit;
+                        }
+                      }
+                      if SimpleSearchAI::num_occupied_x(board, vec![9*i, 9*i + 4, 9*i + 8]) == 2 {
+                        result += (me as i32) * partial_credit;
+                      } 
+                      if SimpleSearchAI::num_occupied_o(board, vec![9*i, 9*i + 4, 9*i + 8]) == 2 {
+                        result -= (me as i32) * partial_credit;
+                      }
+                      if SimpleSearchAI::num_occupied_x(board, vec![9*i + 2, 9*i + 4, 9*i + 6]) == 2 {
+                        result += (me as i32) * partial_credit;
+                      }
+                      if SimpleSearchAI::num_occupied_o(board, vec![9*i + 2, 9*i + 4, 9*i + 6]) == 2 {
+                        result -= (me as i32) * partial_credit;
+                      }
+                  }
+              }
+              if board.x_occupancy & ((1 as u128) << (81 + 4)) != 0 {
+                  result += (me as i32) * 1000;
+              } else if board.o_occupancy & ((1 as u128) << (81 + 4)) != 0 {
+                  result -= (me as i32) * 1000;
+              }
+              for i in [4, 13, 22, 31, 40, 49, 58, 67, 76].iter() {
+                  if board.x_occupancy & ((1 as u128) << i) != 0 as u128 {
+                      result += (me as i32) * 100;
+                  } else if board.o_occupancy & ((1 as u128) << i) != 0 as u128 {
+                      result -= (me as i32) * 100;
+                  }
+              }
+              
+              /*for i in 0..9 {
+                  for j in [0, 2, 4, 6, 8].iter() {
+                    if board.x_occupancy & ((1 as u128) << (9 * i + j)) != 0 as u128 {
+                        result += (me as i32) * 100;
+                    } else if board.o_occupancy & ((1 as u128) << (9 * i + j)) != 0 as u128 {
+                        result -= (me as i32) * 100;
+                    }
+                  }
+              }*/
               return result;
         })
     }
