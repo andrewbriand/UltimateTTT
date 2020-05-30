@@ -44,10 +44,11 @@ impl QuietExtendAI {
                   _alpha: i32, beta: i32) -> (i64, i32) {
         let mut alpha = _alpha;
         if depth == 0 {
-            if rand::random::<u8>() < 10 {
+            let eval = (self.eval)(board, self.me);
+            if rand::random::<u8>() < 10 && eval > -200 {
                 return self.search(board, 2, _alpha, beta);
             }
-            return (-1, (self.eval)(board, self.me));
+            return (-1, eval);
         }
         let moves = board.get_moves();
         if moves == 0 {
