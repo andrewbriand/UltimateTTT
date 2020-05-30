@@ -31,7 +31,9 @@ impl AI for PipeAI {
     }
 
     fn cleanup(&mut self) {
-        self.process.kill();
+        unsafe {
+            self.process.kill();
+        }
     }
 }
 

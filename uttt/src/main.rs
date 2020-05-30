@@ -1,10 +1,10 @@
 #![feature(llvm_asm)]
-use structopt::StructOpt;
+//use structopt::StructOpt;
 mod board;
 mod bitboard;
-use bitboard::BitBoard;
+//use bitboard::BitBoard;
 mod killermovesearch;
-use killermovesearch::KillerMoveAI;
+//use killermovesearch::KillerMoveAI;
 
 mod ai;
 use ai::AI;
@@ -16,7 +16,6 @@ mod pipeai;
 pub use pipeai::PipeAI;
 pub use humanplayer::HumanPlayer;
 use board::Player;
-use board::Square;
 mod simplesearchcenter;
 use simplesearchcenter::SimpleSearchCenterAI;
 mod simplesearch;

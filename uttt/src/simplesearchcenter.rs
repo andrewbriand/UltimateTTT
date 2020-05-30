@@ -1,7 +1,5 @@
 use crate::ai::AI;
 use crate::bitboard::BitBoard;
-use crate::board::Player;
-use crate::board::Square;
 
 pub struct SimpleSearchCenterAI {
     board: BitBoard,
@@ -20,7 +18,7 @@ impl AI for SimpleSearchCenterAI {
             return 40;
         }
         self.me = self.board.to_move;
-        let mut alpha = -100000000;
+        let alpha = -100000000;
         let beta = 100000000;
         let (result_move, result_score) = self.search(&mut self.board.clone(), self.depth, alpha, beta);
         println!("result score: {}", result_score);
@@ -84,7 +82,7 @@ impl SimpleSearchCenterAI {
             return 0;
         }
         let mut result = 0;
-        BitBoard::iterate_moves(board.get_moves(), &mut |m: u128, sf: i64| {
+        BitBoard::iterate_moves(board.get_moves(), &mut |m: u128, _sf: i64| {
             if rand::random::<u8>() < branching {
                 let mut n_b = board.clone();
                 n_b.make_move(m);
@@ -105,7 +103,7 @@ impl SimpleSearchCenterAI {
                   return 0;
               }
               let mut result = 0;
-              for i in 0..games {
+              for _i in 0..games {
                   let mut new_board = _board.clone();
                   while new_board.get_winner() == 0 {
                       new_board.make_move(BitBoard::random_move(new_board.get_moves()));
@@ -179,7 +177,7 @@ impl SimpleSearchCenterAI {
               } else if board.get_winner() == -me {
                  return -50000;
               }
-              let mut partial_credit = 400;
+              let mut partial_credit;
               let mut result : i32 = 0;
               for i in 0..9 {
                   if i == 4 {
@@ -308,7 +306,7 @@ impl SimpleSearchCenterAI {
               } else if board.get_winner() == -me {
                  return -50000;
               }
-              let mut partial_credit = 400;
+              let mut partial_credit;
               let mut result : i32 = 0;
               for i in 0..9 {
                   if i == 4 {

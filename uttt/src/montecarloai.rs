@@ -1,28 +1,11 @@
-use std::collections::HashMap;
 use crate::ai::AI;
-use serde::{Serialize, Deserialize};
 
 use rand;
 
 use crate::board::Board;
 use crate::board::Player;
 
-#[derive(Serialize, Deserialize)]
-struct TreeNode {
-    // the numerator and denominator
-    // of the probability that the move
-    // entering this node
-    // leads to a win
-    numerator: u16,
-    denominator: u16,
-    // maps moves from this node 
-    // to the nodes that contain
-    // their probability
-    children: HashMap<usize, usize>,
-}
 
-
-#[derive(Serialize, Deserialize)]
 pub struct MonteCarloAI {
    board: Board,
 }
@@ -42,7 +25,7 @@ impl AI for MonteCarloAI {
 
 impl MonteCarloAI {
     pub fn new() -> MonteCarloAI {
-        let mut result = MonteCarloAI {
+        let result = MonteCarloAI {
             board: Board::new(2),
         };
         return result;

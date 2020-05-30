@@ -1,7 +1,5 @@
 use crate::ai::AI;
 use crate::bitboard::BitBoard;
-use crate::board::Player;
-use crate::board::Square;
 
 pub struct KillerMoveAI {
     board: BitBoard,
@@ -20,7 +18,7 @@ impl AI for KillerMoveAI {
             self.board.make_move(1 << last_move);
         }
         self.me = self.board.to_move;
-        let mut alpha = -100000000;
+        let alpha = -100000000;
         let beta = 100000000;
         let (result_move, result_score) = self.search(&mut self.board.clone(), self.depth, alpha, beta);
         println!("killer hits: {}/{}", self.killer_hits, self.moves_examined);

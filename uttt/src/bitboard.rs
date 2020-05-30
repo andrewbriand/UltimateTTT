@@ -1,6 +1,3 @@
-use crate::board::Board;
-use crate::board::Player;
-use std::time::Instant;
 
 
 // Only supports 2 levels
@@ -31,7 +28,7 @@ static WIN_TABLE: [u64; 8] = [
 ];
  
 static CELL_MASK: u128 = (1 << 81) - 1;
-static WINNER_MASK: u128 = (1 << 90);
+static WINNER_MASK: u128 = 1 << 90;
 
 impl BitBoard {
     pub fn new() -> BitBoard {
@@ -43,7 +40,7 @@ impl BitBoard {
         }
     }
 
-    fn update_occupancy(&mut self, mut occup: u128, m: u128, block_num: usize, block_offset: usize) -> u128 {
+    fn update_occupancy(&mut self, mut occup: u128, m: u128, block_num: usize) -> u128 {
         //println!("block_num: {}", block_num);
         //println!("block_offset: {}", block_offset);
         
@@ -87,12 +84,12 @@ impl BitBoard {
                 : "r"(m_upper_half));
             }
         }
-        let mut space = 127 - leading_zeros;
+        let space = 127 - leading_zeros;
         let block_num = space / 9;
         let block_offset = space % 9;
         match self.to_move {
-            1 => self.x_occupancy = self.update_occupancy(self.x_occupancy, m, block_num, block_offset),
-            -1 => self.o_occupancy = self.update_occupancy(self.o_occupancy, m, block_num, block_offset),
+            1 => self.x_occupancy = self.update_occupancy(self.x_occupancy, m, block_num),
+            -1 => self.o_occupancy = self.update_occupancy(self.o_occupancy, m, block_num),
             _ => panic!("to_move: {}", self.to_move),
         };
         if self.x_occupancy & (1 << (81 + block_offset)) == 0
@@ -180,7 +177,7 @@ impl BitBoard {
              llvm_asm!("popcnt $1, $0" : "=r"(lower_popcnt)
                             : "r"(m_lower_half));
          }
-         let mut total_popcnt = upper_popcnt + lower_popcnt;
+         let total_popcnt = upper_popcnt + lower_popcnt;
          let mut n = rand::random::<u64>() % total_popcnt; 
          if n < lower_popcnt {
              let mut result: u64;

@@ -1,13 +1,10 @@
 use std::collections::HashMap;
 //use std::thread;
-use std::time::Instant;
 use std::hash::{Hash};
-use serde::{Serialize, Deserialize};
 
 #[derive(PartialEq)]
 #[derive(Clone, Copy)]
 #[derive(Debug)]
-#[derive(Serialize, Deserialize)]
 pub enum Player {
     X,
     O,
@@ -33,7 +30,6 @@ pub enum Player {
 #[derive(Debug)]
 #[derive(Hash)]
 #[derive(Eq)]
-#[derive(Serialize, Deserialize)]
 pub struct Square {
     // the integer corresponding to the 
     // space in the top left corner of this square
@@ -49,7 +45,6 @@ pub struct Square {
 #[derive(Debug)]
 #[derive(Hash)]
 #[derive(Eq)]
-#[derive(Serialize, Deserialize)]
 pub struct Turn {
     pub space: usize,
     pub capture: usize,
@@ -77,7 +72,6 @@ pub struct Turn {
 // top left corner at 00 and its bottom right corner at 08
 #[derive(Debug)]
 #[derive(Clone)]
-#[derive(Serialize, Deserialize)]
 pub struct Board {
     // the index of the top level in the board e.g.
     // max_level = 1 is a standard 3x3 tic-tac-toe board
@@ -233,32 +227,32 @@ impl Board {
     }
 
     // Mark any spaces marked NEITHER in sqr as DEAD
-    fn mark_as_dead(&mut self, sqr: &Square) {
+    /*fn mark_as_dead(&mut self, sqr: &Square) {
         for i in sqr.top_left..=self.bottom_right(*sqr) {
             if self.spaces[i] == Player::NEITHER {
                 self.spaces[i] = Player::DEAD;
             }
         }
-    }
+    }*/
 
     // Mark any spaces marked DEAD in sqr as NEITHER
-    fn mark_as_neither(&mut self, sqr: &Square) {
+    /*fn mark_as_neither(&mut self, sqr: &Square) {
         for i in sqr.top_left..=self.bottom_right(*sqr) {
             if self.spaces[i] == Player::DEAD {
                 self.spaces[i] = Player::NEITHER;
             }
         }
-    }
+    }*/
 
     // Push all spaces that are marked NEITHER in sqr
     // to vec
-    fn get_open_spaces(&self, sqr: Square, vec: &mut Vec<usize>) {
+    /*fn get_open_spaces(&self, sqr: Square, vec: &mut Vec<usize>) {
         for i in sqr.top_left..=self.bottom_right(sqr) {
             if self.spaces[i] == Player::NEITHER {
                 vec.push(i);
             }
         }
-    }
+    }*/
 
     // Returns a vector of the current legal moves
     pub fn get_moves(&self) -> Vec<usize> {
