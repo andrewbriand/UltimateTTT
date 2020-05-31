@@ -1,4 +1,3 @@
-#![feature(llvm_asm)]
 //use structopt::StructOpt;
 mod board;
 mod bitboard;
