@@ -1,14 +1,14 @@
 use crate::ai::AI;
 use crate::bitboard::BitBoard;
 
-pub struct SimpleSearchAI {
+pub struct ShortExtendAI {
     board: BitBoard,
     eval: Box<dyn Fn(&mut BitBoard, i8) -> i32>,
     depth: usize,
     me: i8,
 }
 
-impl AI for SimpleSearchAI {
+impl AI for ShortExtendAI {
 
     fn get_move(&mut self, last_move: i64) -> i64 {
         if last_move != -1 {
@@ -17,7 +17,7 @@ impl AI for SimpleSearchAI {
         self.me = self.board.to_move;
         let alpha = -100000000;
         let beta = 100000000;
-        let (result_move, result_score) = self.search(&mut self.board.clone(), self.depth, alpha, beta);
+        let (result_move, result_score) = self.search(&mut self.board.clone(), self.depth, alpha, beta, 0);
         println!("result score: {}", result_score);
         self.board.make_move(1 << result_move);
         return result_move;
@@ -26,10 +26,10 @@ impl AI for SimpleSearchAI {
     fn cleanup(&mut self) {}
 }
 
-impl SimpleSearchAI {
+impl ShortExtendAI {
     pub fn new<'a>(_eval: Box<dyn Fn(&mut BitBoard, i8) -> i32>, _depth: usize) 
-        -> SimpleSearchAI {
-        SimpleSearchAI {
+        -> ShortExtendAI {
+        ShortExtendAI {
             board: BitBoard::new(),
             eval: _eval,
             depth: _depth,
@@ -38,25 +38,27 @@ impl SimpleSearchAI {
     }
 
     pub fn search(&self, board: &mut BitBoard, depth: usize, 
-                  _alpha: i32, beta: i32) -> (i64, i32) {
+                  _alpha: i32, beta: i32, depth_so_far: usize) -> (i64, i32) {
         let mut alpha = _alpha;
         if depth == 0 {
-            return (-1, (self.eval)(board, board.to_move));
+            let eval = (self.eval)(board, self.me);
+            if depth_so_far < 15 && eval > 1000 {
+                return self.search(board, 4, _alpha, beta, depth_so_far);
+            }
         }
         let moves = board.get_moves();
         if moves == 0 {
-            return (-1, (self.eval)(board, board.to_move));
-            /*if depth % 2 == 0 {
+            if depth % 2 == 0 {
                 return (-1, (self.eval)(board, self.me));
             } else {
                 return (-1, -(self.eval)(board, self.me));
-            }*/
+            }
         }
         let mut result_move = -1;
         BitBoard::iterate_moves(moves, &mut |next_move: u128, next_move_sf: i64| {
            let mut next_b = board.clone();
            next_b.make_move(next_move);
-           let (_, mut score) = self.search(&mut next_b, depth - 1, -beta, -alpha);
+           let (_, mut score) = self.search(&mut next_b, depth - 1, -beta, -alpha, depth_so_far + 1);
            score = -score;
            if score > alpha {
                alpha = score;
@@ -84,7 +86,7 @@ impl SimpleSearchAI {
             if rand::random::<u8>() < branching {
                 let mut n_b = board.clone();
                 n_b.make_move(m);
-                result += SimpleSearchAI::branching_mc(&mut n_b, branching, me);
+                result += ShortExtendAI::branching_mc(&mut n_b, branching, me);
             }
             return true;
         });
@@ -189,78 +191,78 @@ impl SimpleSearchAI {
                       result -= (me as i32) * 1000;
                   } else {
                       for j in 0..3 {
-                        if SimpleSearchAI::num_occupied_x(board, vec![9*i + j, 9*i + j + 3, 9*i + j + 6]) == 2 
-                           && SimpleSearchAI::num_occupied_o(board, vec![9*i + j, 9*i + j + 3, 9*i + j + 6]) == 0 {
+                        if ShortExtendAI::num_occupied_x(board, vec![9*i + j, 9*i + j + 3, 9*i + j + 6]) == 2 
+                           && ShortExtendAI::num_occupied_o(board, vec![9*i + j, 9*i + j + 3, 9*i + j + 6]) == 0 {
                           result += (me as i32) * partial_credit;
                         } 
-                        if SimpleSearchAI::num_occupied_o(board, vec![9*i + j, 9*i + j + 3, 9*i + j + 6]) == 2 
-                           && SimpleSearchAI::num_occupied_x(board, vec![9*i + j, 9*i + j + 3, 9*i + j + 6]) == 0 {
+                        if ShortExtendAI::num_occupied_o(board, vec![9*i + j, 9*i + j + 3, 9*i + j + 6]) == 2 
+                           && ShortExtendAI::num_occupied_x(board, vec![9*i + j, 9*i + j + 3, 9*i + j + 6]) == 0 {
                           result -= (me as i32) * partial_credit;
                         }
                       }
                       for j in [0, 3, 6].iter() {
-                        if SimpleSearchAI::num_occupied_x(board, vec![9*i + j, 9*i + j + 1, 9*i + j + 2]) == 2 
-                           && SimpleSearchAI::num_occupied_o(board, vec![9*i + j, 9*i + j + 1, 9*i + j + 2]) == 0 {
+                        if ShortExtendAI::num_occupied_x(board, vec![9*i + j, 9*i + j + 1, 9*i + j + 2]) == 2 
+                           && ShortExtendAI::num_occupied_o(board, vec![9*i + j, 9*i + j + 1, 9*i + j + 2]) == 0 {
                           result += (me as i32) * partial_credit;
                         }
-                        if SimpleSearchAI::num_occupied_o(board, vec![9*i + j, 9*i + j + 1, 9*i + j + 2]) == 2 
-                           && SimpleSearchAI::num_occupied_x(board, vec![9*i + j, 9*i + j + 1, 9*i + j + 2]) == 0 {
+                        if ShortExtendAI::num_occupied_o(board, vec![9*i + j, 9*i + j + 1, 9*i + j + 2]) == 2 
+                           && ShortExtendAI::num_occupied_x(board, vec![9*i + j, 9*i + j + 1, 9*i + j + 2]) == 0 {
                           result -= (me as i32) * partial_credit;
                         }
                       }
-                      if SimpleSearchAI::num_occupied_x(board, vec![9*i, 9*i + 4, 9*i + 8]) == 2 
-                           && SimpleSearchAI::num_occupied_o(board, vec![9*i, 9*i + 4, 9*i + 8]) == 0 {
+                      if ShortExtendAI::num_occupied_x(board, vec![9*i, 9*i + 4, 9*i + 8]) == 2 
+                           && ShortExtendAI::num_occupied_o(board, vec![9*i, 9*i + 4, 9*i + 8]) == 0 {
                         result += (me as i32) * partial_credit;
                       } 
-                      if SimpleSearchAI::num_occupied_o(board, vec![9*i, 9*i + 4, 9*i + 8]) == 2 
-                           && SimpleSearchAI::num_occupied_x(board, vec![9*i, 9*i + 4, 9*i + 8]) == 0 {
+                      if ShortExtendAI::num_occupied_o(board, vec![9*i, 9*i + 4, 9*i + 8]) == 2 
+                           && ShortExtendAI::num_occupied_x(board, vec![9*i, 9*i + 4, 9*i + 8]) == 0 {
                         result -= (me as i32) * partial_credit;
                       }
-                      if SimpleSearchAI::num_occupied_x(board, vec![9*i + 2, 9*i + 4, 9*i + 6]) == 2 
-                           && SimpleSearchAI::num_occupied_o(board, vec![9*i + 2, 9*i + 4, 9*i + 6]) == 0 {
+                      if ShortExtendAI::num_occupied_x(board, vec![9*i + 2, 9*i + 4, 9*i + 6]) == 2 
+                           && ShortExtendAI::num_occupied_o(board, vec![9*i + 2, 9*i + 4, 9*i + 6]) == 0 {
                         result += (me as i32) * partial_credit;
                       }
-                      if SimpleSearchAI::num_occupied_o(board, vec![9*i + 2, 9*i + 4, 9*i + 6]) == 2 
-                           && SimpleSearchAI::num_occupied_x(board, vec![9*i + 2, 9*i + 4, 9*i + 6]) == 0 {
+                      if ShortExtendAI::num_occupied_o(board, vec![9*i + 2, 9*i + 4, 9*i + 6]) == 2 
+                           && ShortExtendAI::num_occupied_x(board, vec![9*i + 2, 9*i + 4, 9*i + 6]) == 0 {
                         result -= (me as i32) * partial_credit;
                       }
                   }
               }
               let partial_credit_l2 = 6000;
               for j in 0..3 {
-                if SimpleSearchAI::num_occupied_x(board, vec![81 + j, 81 + j + 3, 81 + j + 6]) == 2 
-                           && SimpleSearchAI::num_occupied_o(board, vec![81 + j, 81 + j + 3, 81 + j + 6]) == 0 {
+                if ShortExtendAI::num_occupied_x(board, vec![81 + j, 81 + j + 3, 81 + j + 6]) == 2 
+                           && ShortExtendAI::num_occupied_o(board, vec![81 + j, 81 + j + 3, 81 + j + 6]) == 0 {
                   result += (me as i32) * partial_credit_l2;
                 } 
-                if SimpleSearchAI::num_occupied_o(board, vec![81 + j, 81 + j + 3, 81 + j + 6]) == 2 
-                           && SimpleSearchAI::num_occupied_x(board, vec![81 + j, 81 + j + 3, 81 + j + 6]) == 0 {
+                if ShortExtendAI::num_occupied_o(board, vec![81 + j, 81 + j + 3, 81 + j + 6]) == 2 
+                           && ShortExtendAI::num_occupied_x(board, vec![81 + j, 81 + j + 3, 81 + j + 6]) == 0 {
                   result -= (me as i32) * partial_credit_l2;
                 }
               }
               for j in [0, 3, 6].iter() {
-                if SimpleSearchAI::num_occupied_x(board, vec![81 + j, 81 + j + 1, 81 + j + 2]) == 2 
-                           && SimpleSearchAI::num_occupied_o(board, vec![81 + j, 81 + j + 1, 81 + j + 2]) == 0 {
+                if ShortExtendAI::num_occupied_x(board, vec![81 + j, 81 + j + 1, 81 + j + 2]) == 2 
+                           && ShortExtendAI::num_occupied_o(board, vec![81 + j, 81 + j + 1, 81 + j + 2]) == 0 {
                   result += (me as i32) * partial_credit_l2;
                 }
-                if SimpleSearchAI::num_occupied_o(board, vec![81 + j, 81 + j + 1, 81 + j + 2]) == 2 
-                           && SimpleSearchAI::num_occupied_x(board, vec![81 + j, 81 + j + 1, 81 + j + 2]) == 0 {
+                if ShortExtendAI::num_occupied_o(board, vec![81 + j, 81 + j + 1, 81 + j + 2]) == 2 
+                           && ShortExtendAI::num_occupied_x(board, vec![81 + j, 81 + j + 1, 81 + j + 2]) == 0 {
                   result -= (me as i32) * partial_credit_l2;
                 }
               }
-              if SimpleSearchAI::num_occupied_x(board, vec![81, 81 + 4, 81 + 8]) == 2 
-                           && SimpleSearchAI::num_occupied_o(board, vec![81, 81 + 4, 81 + 8]) == 0 {
+              if ShortExtendAI::num_occupied_x(board, vec![81, 81 + 4, 81 + 8]) == 2 
+                           && ShortExtendAI::num_occupied_o(board, vec![81, 81 + 4, 81 + 8]) == 0 {
                 result += (me as i32) * partial_credit_l2;
               } 
-              if SimpleSearchAI::num_occupied_o(board, vec![81, 81 + 4, 81 + 8]) == 2 
-                           && SimpleSearchAI::num_occupied_x(board, vec![81, 81 + 4, 81 + 8]) == 0 {
+              if ShortExtendAI::num_occupied_o(board, vec![81, 81 + 4, 81 + 8]) == 2 
+                           && ShortExtendAI::num_occupied_x(board, vec![81, 81 + 4, 81 + 8]) == 0 {
                 result -= (me as i32) * partial_credit_l2;
               }
-              if SimpleSearchAI::num_occupied_x(board, vec![81 + 2, 81 + 4, 81 + 6]) == 2 
-                           && SimpleSearchAI::num_occupied_o(board, vec![81 + 2, 81 + 4, 81 + 6]) == 0 {
+              if ShortExtendAI::num_occupied_x(board, vec![81 + 2, 81 + 4, 81 + 6]) == 2 
+                           && ShortExtendAI::num_occupied_o(board, vec![81 + 2, 81 + 4, 81 + 6]) == 0 {
                 result += (me as i32) * partial_credit_l2;
               }
-              if SimpleSearchAI::num_occupied_o(board, vec![81 + 2, 81 + 4, 81 + 6]) == 2 
-                           && SimpleSearchAI::num_occupied_x(board, vec![81 + 2, 81 + 4, 81 + 6]) == 0 {
+              if ShortExtendAI::num_occupied_o(board, vec![81 + 2, 81 + 4, 81 + 6]) == 2 
+                           && ShortExtendAI::num_occupied_x(board, vec![81 + 2, 81 + 4, 81 + 6]) == 0 {
                 result -= (me as i32) * partial_credit_l2;
               }
               if board.x_occupancy & ((1 as u128) << (81 + 4)) != 0 {
@@ -344,78 +346,78 @@ impl SimpleSearchAI {
                       result -= (me as i32) * 1000;
                   } else {
                       for j in 0..3 {
-                        if SimpleSearchAI::num_occupied_x(board, vec![9*i + j, 9*i + j + 3, 9*i + j + 6]) == 2 
-                           && SimpleSearchAI::num_occupied_o(board, vec![9*i + j, 9*i + j + 3, 9*i + j + 6]) == 0 {
+                        if ShortExtendAI::num_occupied_x(board, vec![9*i + j, 9*i + j + 3, 9*i + j + 6]) == 2 
+                           && ShortExtendAI::num_occupied_o(board, vec![9*i + j, 9*i + j + 3, 9*i + j + 6]) == 0 {
                           result += (me as i32) * partial_credit;
                         } 
-                        if SimpleSearchAI::num_occupied_o(board, vec![9*i + j, 9*i + j + 3, 9*i + j + 6]) == 2 
-                           && SimpleSearchAI::num_occupied_x(board, vec![9*i + j, 9*i + j + 3, 9*i + j + 6]) == 0 {
+                        if ShortExtendAI::num_occupied_o(board, vec![9*i + j, 9*i + j + 3, 9*i + j + 6]) == 2 
+                           && ShortExtendAI::num_occupied_x(board, vec![9*i + j, 9*i + j + 3, 9*i + j + 6]) == 0 {
                           result -= (me as i32) * partial_credit;
                         }
                       }
                       for j in [0, 3, 6].iter() {
-                        if SimpleSearchAI::num_occupied_x(board, vec![9*i + j, 9*i + j + 1, 9*i + j + 2]) == 2 
-                           && SimpleSearchAI::num_occupied_o(board, vec![9*i + j, 9*i + j + 1, 9*i + j + 2]) == 0 {
+                        if ShortExtendAI::num_occupied_x(board, vec![9*i + j, 9*i + j + 1, 9*i + j + 2]) == 2 
+                           && ShortExtendAI::num_occupied_o(board, vec![9*i + j, 9*i + j + 1, 9*i + j + 2]) == 0 {
                           result += (me as i32) * partial_credit;
                         }
-                        if SimpleSearchAI::num_occupied_o(board, vec![9*i + j, 9*i + j + 1, 9*i + j + 2]) == 2 
-                           && SimpleSearchAI::num_occupied_x(board, vec![9*i + j, 9*i + j + 1, 9*i + j + 2]) == 0 {
+                        if ShortExtendAI::num_occupied_o(board, vec![9*i + j, 9*i + j + 1, 9*i + j + 2]) == 2 
+                           && ShortExtendAI::num_occupied_x(board, vec![9*i + j, 9*i + j + 1, 9*i + j + 2]) == 0 {
                           result -= (me as i32) * partial_credit;
                         }
                       }
-                      if SimpleSearchAI::num_occupied_x(board, vec![9*i, 9*i + 4, 9*i + 8]) == 2 
-                           && SimpleSearchAI::num_occupied_o(board, vec![9*i, 9*i + 4, 9*i + 8]) == 0 {
+                      if ShortExtendAI::num_occupied_x(board, vec![9*i, 9*i + 4, 9*i + 8]) == 2 
+                           && ShortExtendAI::num_occupied_o(board, vec![9*i, 9*i + 4, 9*i + 8]) == 0 {
                         result += (me as i32) * partial_credit;
                       } 
-                      if SimpleSearchAI::num_occupied_o(board, vec![9*i, 9*i + 4, 9*i + 8]) == 2 
-                           && SimpleSearchAI::num_occupied_x(board, vec![9*i, 9*i + 4, 9*i + 8]) == 0 {
+                      if ShortExtendAI::num_occupied_o(board, vec![9*i, 9*i + 4, 9*i + 8]) == 2 
+                           && ShortExtendAI::num_occupied_x(board, vec![9*i, 9*i + 4, 9*i + 8]) == 0 {
                         result -= (me as i32) * partial_credit;
                       }
-                      if SimpleSearchAI::num_occupied_x(board, vec![9*i + 2, 9*i + 4, 9*i + 6]) == 2 
-                           && SimpleSearchAI::num_occupied_o(board, vec![9*i + 2, 9*i + 4, 9*i + 6]) == 0 {
+                      if ShortExtendAI::num_occupied_x(board, vec![9*i + 2, 9*i + 4, 9*i + 6]) == 2 
+                           && ShortExtendAI::num_occupied_o(board, vec![9*i + 2, 9*i + 4, 9*i + 6]) == 0 {
                         result += (me as i32) * partial_credit;
                       }
-                      if SimpleSearchAI::num_occupied_o(board, vec![9*i + 2, 9*i + 4, 9*i + 6]) == 2 
-                           && SimpleSearchAI::num_occupied_x(board, vec![9*i + 2, 9*i + 4, 9*i + 6]) == 0 {
+                      if ShortExtendAI::num_occupied_o(board, vec![9*i + 2, 9*i + 4, 9*i + 6]) == 2 
+                           && ShortExtendAI::num_occupied_x(board, vec![9*i + 2, 9*i + 4, 9*i + 6]) == 0 {
                         result -= (me as i32) * partial_credit;
                       }
                   }
               }
               let partial_credit_l2 = 6000;
               for j in 0..3 {
-                if SimpleSearchAI::num_occupied_x(board, vec![81 + j, 81 + j + 3, 81 + j + 6]) == 2 
-                           && SimpleSearchAI::num_occupied_o(board, vec![81 + j, 81 + j + 3, 81 + j + 6]) == 0 {
+                if ShortExtendAI::num_occupied_x(board, vec![81 + j, 81 + j + 3, 81 + j + 6]) == 2 
+                           && ShortExtendAI::num_occupied_o(board, vec![81 + j, 81 + j + 3, 81 + j + 6]) == 0 {
                   result += (me as i32) * partial_credit_l2;
                 } 
-                if SimpleSearchAI::num_occupied_o(board, vec![81 + j, 81 + j + 3, 81 + j + 6]) == 2 
-                           && SimpleSearchAI::num_occupied_x(board, vec![81 + j, 81 + j + 3, 81 + j + 6]) == 0 {
+                if ShortExtendAI::num_occupied_o(board, vec![81 + j, 81 + j + 3, 81 + j + 6]) == 2 
+                           && ShortExtendAI::num_occupied_x(board, vec![81 + j, 81 + j + 3, 81 + j + 6]) == 0 {
                   result -= (me as i32) * partial_credit_l2;
                 }
               }
               for j in [0, 3, 6].iter() {
-                if SimpleSearchAI::num_occupied_x(board, vec![81 + j, 81 + j + 1, 81 + j + 2]) == 2 
-                           && SimpleSearchAI::num_occupied_o(board, vec![81 + j, 81 + j + 1, 81 + j + 2]) == 0 {
+                if ShortExtendAI::num_occupied_x(board, vec![81 + j, 81 + j + 1, 81 + j + 2]) == 2 
+                           && ShortExtendAI::num_occupied_o(board, vec![81 + j, 81 + j + 1, 81 + j + 2]) == 0 {
                   result += (me as i32) * partial_credit_l2;
                 }
-                if SimpleSearchAI::num_occupied_o(board, vec![81 + j, 81 + j + 1, 81 + j + 2]) == 2 
-                           && SimpleSearchAI::num_occupied_x(board, vec![81 + j, 81 + j + 1, 81 + j + 2]) == 0 {
+                if ShortExtendAI::num_occupied_o(board, vec![81 + j, 81 + j + 1, 81 + j + 2]) == 2 
+                           && ShortExtendAI::num_occupied_x(board, vec![81 + j, 81 + j + 1, 81 + j + 2]) == 0 {
                   result -= (me as i32) * partial_credit_l2;
                 }
               }
-              if SimpleSearchAI::num_occupied_x(board, vec![81, 81 + 4, 81 + 8]) == 2 
-                           && SimpleSearchAI::num_occupied_o(board, vec![81, 81 + 4, 81 + 8]) == 0 {
+              if ShortExtendAI::num_occupied_x(board, vec![81, 81 + 4, 81 + 8]) == 2 
+                           && ShortExtendAI::num_occupied_o(board, vec![81, 81 + 4, 81 + 8]) == 0 {
                 result += (me as i32) * partial_credit_l2;
               } 
-              if SimpleSearchAI::num_occupied_o(board, vec![81, 81 + 4, 81 + 8]) == 2 
-                           && SimpleSearchAI::num_occupied_x(board, vec![81, 81 + 4, 81 + 8]) == 0 {
+              if ShortExtendAI::num_occupied_o(board, vec![81, 81 + 4, 81 + 8]) == 2 
+                           && ShortExtendAI::num_occupied_x(board, vec![81, 81 + 4, 81 + 8]) == 0 {
                 result -= (me as i32) * partial_credit_l2;
               }
-              if SimpleSearchAI::num_occupied_x(board, vec![81 + 2, 81 + 4, 81 + 6]) == 2 
-                           && SimpleSearchAI::num_occupied_o(board, vec![81 + 2, 81 + 4, 81 + 6]) == 0 {
+              if ShortExtendAI::num_occupied_x(board, vec![81 + 2, 81 + 4, 81 + 6]) == 2 
+                           && ShortExtendAI::num_occupied_o(board, vec![81 + 2, 81 + 4, 81 + 6]) == 0 {
                 result += (me as i32) * partial_credit_l2;
               }
-              if SimpleSearchAI::num_occupied_o(board, vec![81 + 2, 81 + 4, 81 + 6]) == 2 
-                           && SimpleSearchAI::num_occupied_x(board, vec![81 + 2, 81 + 4, 81 + 6]) == 0 {
+              if ShortExtendAI::num_occupied_o(board, vec![81 + 2, 81 + 4, 81 + 6]) == 2 
+                           && ShortExtendAI::num_occupied_x(board, vec![81 + 2, 81 + 4, 81 + 6]) == 0 {
                 result -= (me as i32) * partial_credit_l2;
               }
               if board.x_occupancy & ((1 as u128) << (81 + 4)) != 0 {

@@ -25,6 +25,8 @@ use std::collections::HashMap;
 
 mod montecarloai;
 use montecarloai::MonteCarloAI;
+mod shortextend;
+use shortextend::ShortExtendAI;
 //use text_io::read;
 //use std::time::Instant;
 
@@ -49,27 +51,45 @@ fn main() {
             Box::new(move || Box::new(
                 SimpleSearchAI::new(SimpleSearchAI::diagonal(), 10)))
             ),*/
-            ("abriand_10_center".to_string(), 
+            /*("abriand_10_center".to_string(), 
             Box::new(move || Box::new(
                 SimpleSearchCenterAI::new(SimpleSearchAI::diagonal2(), 10)))
-            ),
-            ("abriand_10".to_string(), 
+            ),*/
+            /*("abriand_10".to_string(), 
             Box::new(move || Box::new(
                 SimpleSearchAI::new(SimpleSearchAI::diagonal2(), 10)))
-            ),
-            ("centers_10".to_string(), 
+            ),*/
+            /*("abriand_11".to_string(), 
+            Box::new(move || Box::new(
+                SimpleSearchAI::new(SimpleSearchAI::diagonal2(), 11)))
+            ),*/
+            /*("shortextend_4_20".to_string(),
+            Box::new(move || Box::new(
+                 ShortExtendAI::new(ShortExtendAI::diagonal2(), 4)
+            ))
+            ),*/
+            /*("quiet_10".to_string(), 
+            Box::new(move || Box::new(
+                QuietExtendAI::new(QuietExtendAI::diagonal2(), 4)))
+            ),*/
+            /*("centers_10".to_string(), 
             Box::new(move || Box::new(
                 SimpleSearchAI::new(SimpleSearchAI::centers(), 10)))
+            ),*/
+            ("abriand_10".to_string(),
+            Box::new(move || Box::new(
+                PipeAI::new("C:/Users/atb88/Desktop/uttt-bot/target/release/uttt-bot.exe".to_string(),
+                      vec![])))
             ),
             ("ggeng_10".to_string(),
             Box::new(move || Box::new(
                 PipeAI::new("C:/ultimate-tictactoe/target/release/main.exe".to_string(),
                       vec!["10".to_string()])))
             ),
-            ("good_extend_10".to_string(), 
+            /*("good_extend_10".to_string(), 
             Box::new(move || Box::new(
                 QuietExtendAI::new(SimpleSearchAI::diagonal2(), 10)))
-            ),
+            ),*/
 
             /*("killer_10".to_string(), 
             Box::new(move || Box::new(
@@ -86,7 +106,7 @@ fn main() {
         ];
     let mut games: HashMap<(String, String), Player> = HashMap::new();
     let mut scores: Vec<f32> = vec![0.0; ais.len()];
-    for _i in 0..6 {
+    for _i in 0..1 {
     for x_idx in 0..ais.len() {
         for o_idx in 0..ais.len() {
             if x_idx != o_idx {
