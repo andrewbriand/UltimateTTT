@@ -1,34 +1,16 @@
-//use structopt::StructOpt;
 mod board;
-mod bitboard;
-//use bitboard::BitBoard;
-mod killermovesearch;
-//use killermovesearch::KillerMoveAI;
 
 mod ai;
 use ai::AI;
 pub use board::Board;
 mod humanplayer;
-mod quietextend;
-use quietextend::QuietExtendAI;
 mod pipeai;
 pub use pipeai::PipeAI;
 pub use humanplayer::HumanPlayer;
 use board::Player;
-mod simplesearchcenter;
-use simplesearchcenter::SimpleSearchCenterAI;
-mod simplesearch;
-use simplesearch::SimpleSearchAI;
- use std::time::Instant;
+use std::time::Instant;
 
 use std::collections::HashMap;
-
-mod montecarloai;
-use montecarloai::MonteCarloAI;
-mod shortextend;
-use shortextend::ShortExtendAI;
-//use text_io::read;
-//use std::time::Instant;
 
 /*#[derive(StructOpt)]
 struct Cli {
@@ -47,35 +29,6 @@ fn main() {
                 vec!["uttt.js".to_string(), "10".to_string()])
             ))
             ),*/
-            /*("diagonal_10".to_string(), 
-            Box::new(move || Box::new(
-                SimpleSearchAI::new(SimpleSearchAI::diagonal(), 10)))
-            ),*/
-            /*("abriand_10_center".to_string(), 
-            Box::new(move || Box::new(
-                SimpleSearchCenterAI::new(SimpleSearchAI::diagonal2(), 10)))
-            ),*/
-            /*("abriand_10".to_string(), 
-            Box::new(move || Box::new(
-                SimpleSearchAI::new(SimpleSearchAI::diagonal2(), 10)))
-            ),*/
-            /*("abriand_11".to_string(), 
-            Box::new(move || Box::new(
-                SimpleSearchAI::new(SimpleSearchAI::diagonal2(), 11)))
-            ),*/
-            /*("shortextend_4_20".to_string(),
-            Box::new(move || Box::new(
-                 ShortExtendAI::new(ShortExtendAI::diagonal2(), 4)
-            ))
-            ),*/
-            /*("quiet_10".to_string(), 
-            Box::new(move || Box::new(
-                QuietExtendAI::new(QuietExtendAI::diagonal2(), 4)))
-            ),*/
-            /*("centers_10".to_string(), 
-            Box::new(move || Box::new(
-                SimpleSearchAI::new(SimpleSearchAI::centers(), 10)))
-            ),*/
             ("abriand_10".to_string(),
             Box::new(move || Box::new(
                 PipeAI::new("C:/Users/atb88/Desktop/uttt-bot/target/release/uttt-bot.exe".to_string(),
@@ -86,23 +39,6 @@ fn main() {
                 PipeAI::new("C:/ultimate-tictactoe/target/release/main.exe".to_string(),
                       vec!["10".to_string()])))
             ),
-            /*("good_extend_10".to_string(), 
-            Box::new(move || Box::new(
-                QuietExtendAI::new(SimpleSearchAI::diagonal2(), 10)))
-            ),*/
-
-            /*("killer_10".to_string(), 
-            Box::new(move || Box::new(
-                KillerMoveAI::new(KillerMoveAI::abriand_eval_1(), 10)))
-            ),
-            ("quiet_10".to_string(), 
-            Box::new(move || Box::new(
-                QuietExtendAI::new(QuietExtendAI::abriand_eval_1(), 10)))
-            ),*/
-            /*("abriand1_14".to_string(), 
-            Box::new(move || Box::new(
-                SimpleSearchAI::new(SimpleSearchAI::abriand_eval_1(), 14)))
-            ),*/
         ];
     let mut games: HashMap<(String, String), Player> = HashMap::new();
     let mut scores: Vec<f32> = vec![0.0; ais.len()];
