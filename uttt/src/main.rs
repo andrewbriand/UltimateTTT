@@ -7,9 +7,11 @@ mod humanplayer;
 mod pipeai;
 pub use pipeai::PipeAI;
 pub use humanplayer::HumanPlayer;
+mod uti;
 use board::Player;
-use std::time::Instant;
 
+use std::time::Instant;
+use std::time::Duration;
 use std::collections::HashMap;
 
 /*#[derive(StructOpt)]
@@ -20,7 +22,12 @@ struct Cli {
     x_ai_path: std::path::PathBuf,
 }*/
 
-fn main() {
+// need this or tokio will panic.
+// see https://stackoverflow.com/questions/59582398/how-do-i-solve-the-error-thread-main-panicked-at-no-current-reactor
+#[tokio::main]
+async fn main() {
+    const TIME_EACH: Duration = Duration::from_secs(300);
+
     let ais: Vec<(String, Box<dyn Fn() -> Box<dyn AI>>)> = 
         vec![
             /*("javascript_10".to_string(),
@@ -29,15 +36,25 @@ fn main() {
                 vec!["uttt.js".to_string(), "10".to_string()])
             ))
             ),*/
-            ("abriand_10".to_string(),
+            /*("abriand_10".to_string(),
             Box::new(move || Box::new(
                 PipeAI::new("C:/Users/atb88/Desktop/uttt-bot/target/release/uttt-bot.exe".to_string(),
                       vec![])))
-            ),
-            ("ggeng_10".to_string(),
+            ),*/
+            /*("ggeng_10".to_string(),
             Box::new(move || Box::new(
                 PipeAI::new("C:/ultimate-tictactoe/target/release/main.exe".to_string(),
                       vec!["10".to_string()])))
+            ),*/
+            ("tester".to_string(),
+            Box::new(move || Box::new(
+                PipeAI::new("python".to_string(),
+                      vec!["tester.py".to_string()], TIME_EACH)))
+            ),
+            ("tester".to_string(),
+            Box::new(move || Box::new(
+                PipeAI::new("python".to_string(),
+                      vec!["tester.py".to_string()], TIME_EACH)))
             ),
         ];
     let mut games: HashMap<(String, String), Player> = HashMap::new();
@@ -48,7 +65,7 @@ fn main() {
             if x_idx != o_idx {
                 let (o_name, o_ctor) = &ais[o_idx];
                 let (x_name, x_ctor) = &ais[x_idx];
-                match play_game(&mut *x_ctor(), &mut *o_ctor()) {
+                match play_game(&mut *x_ctor(), &mut *o_ctor()).await {
                     Player::X => {
                         scores[x_idx] += 1.0;
                         games.insert((x_name.clone(), o_name.clone() + " " + &_i.to_string()), Player::X);
@@ -77,15 +94,38 @@ fn main() {
     }
 }
 
-fn play_game(x_ai: &mut dyn AI, o_ai: &mut dyn AI) -> Player {
+async fn play_game(x_ai: &mut dyn AI, o_ai: &mut dyn AI) -> Player {
     let mut times_vec = Vec::new();
     let mut now = Instant::now();
-    let mut last_move = x_ai.get_move(-1);
+    // time allowed for engine to get ready
+    // TODO define a constant for this
+    let dur = Duration::from_secs(5);
+    let x_ready = x_ai.ready(dur).await;
+    let o_ready = o_ai.ready(dur).await;
+
+    if !x_ready && !o_ready {
+        println!("Neither got ready in time. It is drawn.");
+        return Player::DEAD;
+    }
+    if !x_ready {
+        println!("X wasn't able to get ready in time. O wins.");
+        return Player::O;
+    }
+    if !o_ready {
+        println!("O wasn't able to get ready in time. X wins.");
+        return Player::X;
+    }
+
+    println!("both players are ready.");
+
+    println!("asking X for move..");
+    let mut last_move = x_ai.get_move(-1).await;
+    println!("X replied");
     times_vec.push(now.elapsed().as_millis());
     let mut board = Board::new(2);
     loop {
         if last_move == -1 {
-            println!("X forfeited");
+            println!("X forfeited (or timed out/sent illegal command). TODO see pipai.rs::get_move()");
             board.winner = Player::O;
             break;
         }
@@ -99,9 +139,9 @@ fn play_game(x_ai: &mut dyn AI, o_ai: &mut dyn AI) -> Player {
         if board.winner != Player::NEITHER {
             break;
         }
-        last_move = o_ai.get_move(last_move);
+        last_move = o_ai.get_move(last_move).await;
         if last_move == -1 {
-            println!("O forfeited");
+            println!("O forfeited (or timed out/sent illegal command). TODO see pipai.rs::get_move()");
             board.winner = Player::X;
             break;
         }
@@ -116,7 +156,7 @@ fn play_game(x_ai: &mut dyn AI, o_ai: &mut dyn AI) -> Player {
             break;
         }
         now = Instant::now();
-        last_move = x_ai.get_move(last_move);
+        last_move = x_ai.get_move(last_move).await;
         times_vec.push(now.elapsed().as_millis());
     }
     board.pretty_print();

@@ -1,13 +1,21 @@
 pub use crate::board::Board;
 pub use crate::ai::AI;
 use text_io::read;
+use std::time::Duration;
+use async_trait::async_trait;
 
 pub struct HumanPlayer {
     board: Board,
 }
 
+#[async_trait]
 impl AI for HumanPlayer {
-    fn get_move(&mut self, last_move : i64) -> i64 {
+    async fn ready(&mut self, time_allowed: Duration) -> bool {
+        panic!("humanplayer::ready not implemented");
+    }
+
+    // TODO add time limit, etc.
+    async fn get_move(&mut self, last_move : i64) -> i64 {
         if last_move != -1 {
             self.board.make_move(last_move as usize);
         }
