@@ -107,7 +107,9 @@ impl AI for PipeAI {
     // currently only supports getting the best move.
     async fn get_move(&mut self, last_move: i64) -> i64 {
         // update last move
-        self.send_command(format!("pos moves {}", last_move)).await;
+        if (last_move != -1) {
+            self.send_command(format!("pos moves {}", last_move)).await;
+        }
         self.send_command("search free".to_string()).await;
 
         // get move made
