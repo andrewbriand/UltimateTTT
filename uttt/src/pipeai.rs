@@ -21,6 +21,7 @@ impl PipeAI {
     pub fn new(cmd: String, args: Vec<String>, init_time: Duration) -> PipeAI {
         let mut command = Command::new(cmd.clone());
         let command = command.args(&args[..]);
+        let command = command.kill_on_drop(true);
         command.stdout(Stdio::piped());
         command.stdin(Stdio::piped());
 
