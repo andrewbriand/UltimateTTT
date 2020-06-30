@@ -1,4 +1,4 @@
-pub use crate::board::Board;
+/*pub use crate::board::Board;
 pub use crate::ai::AI;
 use text_io::read;
 use std::time::Duration;
@@ -43,4 +43,4 @@ impl HumanPlayer {
     pub fn new(max_level_: usize) -> HumanPlayer {
         HumanPlayer { board: Board::new(max_level_) }
     }
-}
+}*/

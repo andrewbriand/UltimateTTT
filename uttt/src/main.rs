@@ -3,10 +3,10 @@ mod board;
 mod ai;
 use ai::AI;
 pub use board::Board;
-mod humanplayer;
+//mod humanplayer;
 mod pipeai;
 pub use pipeai::PipeAI;
-pub use humanplayer::HumanPlayer;
+//pub use humanplayer::HumanPlayer;
 mod uti;
 use board::Player;
 
@@ -26,7 +26,7 @@ struct Cli {
 // see https://stackoverflow.com/questions/59582398/how-do-i-solve-the-error-thread-main-panicked-at-no-current-reactor
 #[tokio::main]
 async fn main() {
-    const TIME_EACH: Duration = Duration::from_secs(300);
+    const TIME_EACH: Duration = Duration::from_secs(60);
 
     let ais: Vec<(String, Box<dyn Fn() -> Box<dyn AI>>)> = 
         vec![
@@ -39,7 +39,12 @@ async fn main() {
             /*("abriand_10".to_string(),
             Box::new(move || Box::new(
                 PipeAI::new("C:/Users/atb88/Desktop/uttt-bot/target/release/uttt-bot.exe".to_string(),
-                      vec![])))
+                      vec![], TIME_EACH)))
+            ),
+            ("abriand_10_2".to_string(),
+            Box::new(move || Box::new(
+                PipeAI::new("C:/Users/atb88/Desktop/uttt-bot/target/release/uttt-bot.exe".to_string(),
+                      vec![], TIME_EACH)))
             ),*/
             /*("ggeng_10".to_string(),
             Box::new(move || Box::new(
@@ -119,7 +124,7 @@ async fn play_game(x_ai: &mut dyn AI, o_ai: &mut dyn AI) -> Player {
     println!("both players are ready.");
 
     println!("asking X for move..");
-    let mut last_move = x_ai.get_move(-1).await;
+    let mut last_move = x_ai.get_move(-1, x_ai.get_rem_time(), o_ai.get_rem_time()).await;
     println!("X replied");
     times_vec.push(now.elapsed().as_millis());
     let mut board = Board::new(2);
@@ -139,7 +144,7 @@ async fn play_game(x_ai: &mut dyn AI, o_ai: &mut dyn AI) -> Player {
         if board.winner != Player::NEITHER {
             break;
         }
-        last_move = o_ai.get_move(last_move).await;
+        last_move = o_ai.get_move(last_move, x_ai.get_rem_time(), o_ai.get_rem_time()).await;
         if last_move == -1 {
             println!("O forfeited (or timed out/sent illegal command). TODO see pipai.rs::get_move()");
             board.winner = Player::X;
@@ -156,7 +161,7 @@ async fn play_game(x_ai: &mut dyn AI, o_ai: &mut dyn AI) -> Player {
             break;
         }
         now = Instant::now();
-        last_move = x_ai.get_move(last_move).await;
+        last_move = x_ai.get_move(last_move, x_ai.get_rem_time(), o_ai.get_rem_time()).await;
         times_vec.push(now.elapsed().as_millis());
     }
     board.pretty_print();
