@@ -330,9 +330,10 @@ impl GamePool {
 async fn main() {
     // number of double-matches, i.e. including switch-sides. There will be total 2x matches.
 
-    let N_GAMES = 100;
-    let K_CLOSEST = 3; // match a bot with its K nearest neighbors in ELO every time
-    let N_GAMES_PER_UPDATE = 24; // print ranking after at least this many games
+    let N_GAMES = 100;  // total number of games to run
+    let K_CLOSEST = 3;  // match a bot with its K nearest neighbors in ELO every time
+    let N_GAMES_PER_UPDATE = 24;  // print ranking after at least this many games
+    let N_THREADS = 6;  // number of games run concurrently
 
     let gary_path = "C:/Users/Gary/Code/uttt/target/release/codingame.exe";
     let mut c_args = vec![];
@@ -347,7 +348,7 @@ async fn main() {
         .collect();
     let n_bots = bots.len();
     assert!(bots.len() >= 2);
-    let mut pool = GamePool::new(bots, 4);
+    let mut pool = GamePool::new(bots, N_THREADS);
     let mut indices = Vec::new(); // intermediate vector for getting K closest bots to some bot
     for i in 0..n_bots {
         indices.push(i);
