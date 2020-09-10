@@ -179,31 +179,6 @@ impl GamePool {
         };
     }
 
-    async fn run_game(
-        x_bot: Bot,
-        o_bot: Bot,
-        x_idx: usize,
-        o_idx: usize,
-        mut tx: Sender<GameResult>,
-    ) {
-        let winner = play_game(x_bot, o_bot).await;
-        if let Err(_) = tx
-            .send(GameResult {
-                x_idx: x_idx,
-                o_idx: o_idx,
-                winner: winner,
-            })
-            .await
-        {
-            eprintln!("send game result failed");
-        }
-    }
-
-    async fn bitch() {
-        let mut output = File::create("hi.txt").unwrap();
-        write!(output, "Rust\n💖\nFun").unwrap();
-    }
-
     async fn enqueue(&mut self, a_idx: usize, b_idx: usize) {
         self.enqueue_helper(a_idx, b_idx).await;
         self.enqueue_helper(b_idx, a_idx).await;
@@ -214,23 +189,6 @@ impl GamePool {
         debug_assert!(self.receivers.len() <= self.max_threads);
         if self.receivers.len() == self.max_threads {
             // wait for opening
-            /*
-            loop {
-                for i in 0..self.receivers.len() {
-                    match self.receivers[i].try_recv() {
-                        Ok(r) => {
-                            // TODO handle result
-                            self.update_ratings(r);
-                            break;
-                        }
-                        Err(e) => {} // sender hasn't sent message
-                    }
-                    self.receivers.remove(i);
-                    break;
-                }
-                // TODO maybe sleep for a little bit?
-            }
-            */
             if let Some(r) = self.receivers[0].recv().await {
                 let res_str = match r.winner {
                     Player::X => "1-0",
