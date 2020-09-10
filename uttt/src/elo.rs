@@ -247,8 +247,8 @@ impl GamePool {
         // expected game results
         let e_x = GamePool::expected_score(r_x, r_o);
         let e_o = GamePool::expected_score(r_o, r_x);
-        let k_x = 800.0 / (self.bots[result.x_idx].n_games as f32 + 20.0);
-        let k_o = 800.0 / (self.bots[result.o_idx].n_games as f32 + 20.0);
+        let k_x = 800.0 / (self.bots[result.x_idx].n_games as f32 + 5.0);
+        let k_o = 800.0 / (self.bots[result.o_idx].n_games as f32 + 5.0);
         // actual game results
         let a_x;
         let a_o;
@@ -269,10 +269,10 @@ impl GamePool {
             Player::NEITHER => panic!("Winner is NEITHER"),
         }
         let x_rating = self.bots[result.x_idx].rating;
-        let x_diff = (k_x * (e_x - a_x)) as i32; // TODO floor at some value?
+        let x_diff = (k_x * (a_x - e_x)) as i32; // TODO floor at some value?
         self.bots[result.x_idx].rating = x_rating + x_diff;
         let o_rating = self.bots[result.o_idx].rating;
-        let o_diff = (k_o * (e_o - a_o)) as i32;
+        let o_diff = (k_o * (a_o - e_o)) as i32;
         self.bots[result.o_idx].rating = o_rating + o_diff;
         self.bots[result.x_idx].n_games += 1;
         self.bots[result.o_idx].n_games += 1;
