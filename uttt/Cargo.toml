@@ -9,9 +9,18 @@ edition = "2018"
 [dependencies]
 structopt = "0.2.10"
 text_io = "0.1.8"
-tokio = { version = "0.2.21", features = ["io-util", "process", "time", "macros"] }
+tokio = { version = "0.2.21", features = ["io-util", "process", "time", "macros", "rt-core", "sync"] }
 futures = "0.3"
 async-trait = "0.1.36"
+rand = "0.7.3"
+
+[[bin]]
+name = "elo"
+path = "src/elo.rs"
+
+[[bin]]
+name = "main"
+path = "src/main.rs"
 
 [profile.release]
 debug = true

@@ -26,7 +26,7 @@ struct Cli {
 // see https://stackoverflow.com/questions/59582398/how-do-i-solve-the-error-thread-main-panicked-at-no-current-reactor
 #[tokio::main]
 async fn main() {
-    const TIME_EACH: Duration = Duration::from_secs(60);
+    const TIME_EACH: Duration = Duration::from_secs(300);
 
     let ais: Vec<(String, Box<dyn Fn() -> Box<dyn AI>>)> = 
         vec![
@@ -51,7 +51,7 @@ async fn main() {
                 PipeAI::new("C:/ultimate-tictactoe/target/release/main.exe".to_string(),
                       vec!["10".to_string()])))
             ),*/
-            ("tester".to_string(),
+            /*("tester".to_string(),
             Box::new(move || Box::new(
                 PipeAI::new("python".to_string(),
                       vec!["tester.py".to_string()], TIME_EACH)))
@@ -60,6 +60,18 @@ async fn main() {
             Box::new(move || Box::new(
                 PipeAI::new("python".to_string(),
                       vec!["tester.py".to_string()], TIME_EACH)))
+            ),*/
+            ("ggeng_crappy1".to_string(),
+            Box::new(move || Box::new(
+                PipeAI::new("C:/Users/Gary/Code/uttt/target/release/main.exe"
+                    .to_string(),
+                      vec![], TIME_EACH)))
+            ),
+            ("ggeng_crappy2".to_string(),
+            Box::new(move || Box::new(
+                PipeAI::new("C:/Users/Gary/Code/uttt/target/release/main.exe"
+                    .to_string(),
+                      vec![], TIME_EACH)))
             ),
         ];
     let mut games: HashMap<(String, String), Player> = HashMap::new();
@@ -123,9 +135,7 @@ async fn play_game(x_ai: &mut dyn AI, o_ai: &mut dyn AI) -> Player {
 
     println!("both players are ready.");
 
-    println!("asking X for move..");
     let mut last_move = x_ai.get_move(-1, x_ai.get_rem_time(), o_ai.get_rem_time()).await;
-    println!("X replied");
     times_vec.push(now.elapsed().as_millis());
     let mut board = Board::new(2);
     loop {
@@ -166,6 +176,10 @@ async fn play_game(x_ai: &mut dyn AI, o_ai: &mut dyn AI) -> Player {
     }
     board.pretty_print();
     println!("{:?}", board.move_history);
+    for mov in board.move_history {
+        print!("{}, ", mov.space);
+    }
+    println!("\n");
     println!("{:?}", times_vec);
     x_ai.cleanup();
     o_ai.cleanup();

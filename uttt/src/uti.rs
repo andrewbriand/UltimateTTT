@@ -17,9 +17,11 @@ fn parse_keyvalue(line: &str) -> ParseResult {
         //let tok = tok.trim();
         let kv = tok.split("=").collect::<Vec<&str>>();
         if kv.len() != 2 {
-            return Err(String::from("invalid key-value pair format"));
+            eprintln!("error: key-value pair format incorrect");
+            continue;
         }
-        map.insert(String::from(kv[0]), String::from(kv[1]));
+
+        map.insert(String::from(kv[0].trim()), String::from(kv[1].trim()));
     }
     Ok(map)
 }

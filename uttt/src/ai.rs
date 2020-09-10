@@ -17,3 +17,5 @@ pub trait AI {
 
     fn cleanup(&mut self);
 }
+
+// TODO implement trait for Codingame AI
